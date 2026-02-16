@@ -485,8 +485,8 @@
 
     <script>
         // ⚙️ CONFIGURATION - À MODIFIER
-        const RUNPOD_ENDPOINT_ID = '4urerdbvo4yy2h'; // ← Mettez votre Endpoint ID
-        const RUNPOD_API_KEY = 'rpa_AW2ZO432090DZPRQ4HHIVWEV5QV071CPER0SU9XY1tzek0';         // ← Mettez votre API Key
+        const RUNPOD_ENDPOINT_ID = 'VOTRE_ENDPOINT_ID'; // ← Mettez votre Endpoint ID
+        const RUNPOD_API_KEY = 'VOTRE_API_KEY';         // ← Mettez votre API Key
 
         // Elements
         const form = document.getElementById('videoForm');
@@ -672,6 +672,14 @@
                         updateProgress(100, 'Terminé !');
 
                         const output = result.output;
+                        
+                        // Afficher les prompts
+                        if (output.user_prompt) {
+                            addLog('info', `📝 Prompt utilisateur: ${output.user_prompt}`);
+                        }
+                        if (output.wan_prompt) {
+                            addLog('info', `🎬 Prompt Wan 2.2: ${output.wan_prompt}`);
+                        }
                         
                         // Récupérer l'URL de téléchargement
                         if (output && output.download_url) {

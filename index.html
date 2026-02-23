@@ -461,6 +461,62 @@
                 </div>
             </div>
 
+            <!-- Frame Rate -->
+            <div class="form-group">
+                <label for="frameRate">
+                    Frame Rate (FPS)
+                    <span class="slider-value" id="frameRateValue">8</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="frameRate" min="8" max="60" step="1" value="8">
+                </div>
+            </div>
+
+            <!-- Réglages avancés -->
+            <div class="form-group">
+                <details style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #667eea; user-select: none;">
+                        ⚙️ Réglages avancés
+                    </summary>
+                    <div style="margin-top: 20px;">
+                        
+                        <!-- Motion Amplitude -->
+                        <div class="form-group">
+                            <label for="motionAmplitude">
+                                Motion Amplitude
+                                <span class="slider-value" id="motionAmplitudeValue">1.15</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" id="motionAmplitude" min="1.0" max="1.30" step="0.01" value="1.15">
+                            </div>
+                            <small style="color: #666; display: block; margin-top: 5px;">Intensité du mouvement (1.0 = minimal, 1.30 = maximal)</small>
+                        </div>
+
+                        <!-- Color Protect -->
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="colorProtect" style="width: auto; height: auto; cursor: pointer;">
+                                <span>Color Protect</span>
+                            </label>
+                            <small style="color: #666; display: block; margin-top: 5px; margin-left: 30px;">Préserve les couleurs d'origine</small>
+                        </div>
+
+                        <!-- Correct Strength -->
+                        <div class="form-group">
+                            <label for="correctStrength">
+                                Correct Strength
+                                <span class="slider-value" id="correctStrengthValue">0.0</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" id="correctStrength" min="0" max="0.30" step="0.01" value="0">
+                            </div>
+                            <small style="color: #666; display: block; margin-top: 5px;">Force de correction des couleurs</small>
+                        </div>
+
+                    </div>
+                </details>
+            </div>
+
             <!-- Prompt (maintenant textarea) -->
             <div class="form-group">
                 <label for="prompt">Prompt (description du mouvement)</label>
@@ -561,6 +617,27 @@
             lengthValue.textContent = this.value;
         });
 
+        // Nouveaux sliders
+        const frameRate = document.getElementById('frameRate');
+        const frameRateValue = document.getElementById('frameRateValue');
+        const motionAmplitude = document.getElementById('motionAmplitude');
+        const motionAmplitudeValue = document.getElementById('motionAmplitudeValue');
+        const colorProtect = document.getElementById('colorProtect');
+        const correctStrength = document.getElementById('correctStrength');
+        const correctStrengthValue = document.getElementById('correctStrengthValue');
+
+        frameRate.addEventListener('input', function() {
+            frameRateValue.textContent = this.value;
+        });
+
+        motionAmplitude.addEventListener('input', function() {
+            motionAmplitudeValue.textContent = parseFloat(this.value).toFixed(2);
+        });
+
+        correctStrength.addEventListener('input', function() {
+            correctStrengthValue.textContent = parseFloat(this.value).toFixed(2);
+        });
+
         // Form submit
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -607,12 +684,17 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        workflow_name: "animation_image",
                         workflow_type: workflowType,
                         video_format: format === 0 ? "16:9" : "9:16",
                         size_scale: Math.round(scale * 100),
                         video_length: length,
                         user_prompt: prompt,
-                        image_base64: imageBase64.split(',')[1]
+                        image_base64: imageBase64.split(',')[1],
+                        frame_rate: parseInt(frameRate.value),
+                        motion_amplitude: parseFloat(motionAmplitude.value),
+                        color_protect: colorProtect.checked,
+                        correct_strength: parseFloat(correctStrength.value)
                     })
                 });
 

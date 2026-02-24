@@ -557,9 +557,14 @@
             <h3>✅ Vidéo générée avec succès !</h3>
             <video controls id="videoPlayer"></video>
             <br>
-            <a href="#" class="download-btn" id="downloadBtn" download="wan22_video.mp4">
-                📥 Télécharger la vidéo
-            </a>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
+                <button onclick="downloadVideo()" class="download-btn" id="downloadBtn">
+                    📥 Télécharger la vidéo
+                </button>
+                <a href="#" class="download-btn" id="openBtn" target="_blank" style="background: #667eea;">
+                    🔗 Ouvrir dans le navigateur
+                </a>
+            </div>
         </div>
     </div>
 
@@ -811,14 +816,44 @@
             }
         }
 
+        // URL courante de la vidéo
+        let currentVideoUrl = null;
+
         // Display video
         function displayVideo(videoUrl) {
+            currentVideoUrl = videoUrl;
             videoPlayer.src = videoUrl;
-            downloadBtn.href = videoUrl;
+            document.getElementById('openBtn').href = videoUrl;
             videoResult.classList.add('active');
             
             // Scroll to video
             videoResult.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Téléchargement compatible mobile
+        async function downloadVideo() {
+            if (!currentVideoUrl) return;
+            
+            try {
+                // Méthode fetch + blob — fonctionne sur Android et desktop
+                addLog('info', '📥 Téléchargement en cours...');
+                const response = await fetch(currentVideoUrl);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = 'wan22_video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+                addLog('success', '✅ Téléchargement lancé !');
+            } catch (err) {
+                // Fallback iOS Safari — ouvre dans le navigateur pour "Enregistrer"
+                addLog('warning', '⚠️ Téléchargement direct non supporté, ouverture dans le navigateur...');
+                window.open(currentVideoUrl, '_blank');
+            }
         }
 
         // Add log entry

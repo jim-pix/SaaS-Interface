@@ -377,6 +377,56 @@
             margin: 5px 0;
         }
 
+        .multiplier-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .multiplier-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .multiplier-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .multiplier-option label {
+            display: block;
+            padding: 10px;
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .multiplier-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .duration-box {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #e8eaf6, #f3e5f5);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-size: 0.95em;
+            color: #333;
+        }
+
+        .duration-box .duration-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
         /* Scrollbar personnalisé pour les logs */
         .logs-section::-webkit-scrollbar {
             width: 8px;
@@ -464,12 +514,44 @@
             <!-- Frame Rate -->
             <div class="form-group">
                 <label for="frameRate">
-                    Frame Rate (FPS)
+                    Frame Rate de génération (FPS)
                     <span class="slider-value" id="frameRateValue">8</span>
                 </label>
                 <div class="slider-container">
                     <input type="range" id="frameRate" min="8" max="60" step="1" value="8">
                 </div>
+            </div>
+
+            <!-- Upscale Multiplier -->
+            <div class="form-group">
+                <label>Upscale Multiplier (RIFE)</label>
+                <div class="multiplier-group">
+                    <div class="multiplier-option">
+                        <input type="radio" id="rife2" name="rifeMultiplier" value="2" checked>
+                        <label for="rife2">x2</label>
+                    </div>
+                    <div class="multiplier-option">
+                        <input type="radio" id="rife4" name="rifeMultiplier" value="4">
+                        <label for="rife4">x4</label>
+                    </div>
+                    <div class="multiplier-option">
+                        <input type="radio" id="rife6" name="rifeMultiplier" value="6">
+                        <label for="rife6">x6</label>
+                    </div>
+                    <div class="multiplier-option">
+                        <input type="radio" id="rife8" name="rifeMultiplier" value="8">
+                        <label for="rife8">x8</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Durée estimée -->
+            <div class="duration-box" id="durationBox">
+                🎬 Durée estimée de la vidéo finale :
+                <span class="duration-value" id="durationValue">3.8s</span>
+                <span style="color:#666; font-size:0.85em;">
+                    — <span id="durationDetail">61 frames × x2 ÷ 32fps</span>
+                </span>
             </div>
 
             <!-- Réglages avancés -->
@@ -596,6 +678,26 @@
         let timerInterval = null;
         let currentJobId = null;
         let pollInterval = null;
+        let simulatedProgress = 10;
+        let simulationInterval = null;
+
+        function startProgressSimulation() {
+            simulationInterval = setInterval(() => {
+                if (simulatedProgress < 92) {
+                    const remaining = 92 - simulatedProgress;
+                    const increment = Math.max(0.1, remaining * 0.012);
+                    simulatedProgress = Math.min(92, simulatedProgress + increment);
+                    updateProgress(simulatedProgress, 'Génération en cours...');
+                }
+            }, 1000);
+        }
+
+        function stopProgressSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        }
 
         // Preview image
         imageInput.addEventListener('change', function(e) {
@@ -612,6 +714,17 @@
             }
         });
 
+        // Calcul durée estimée
+        function updateDuration() {
+            const frames = parseInt(videoLength.value);
+            const fps = parseInt(frameRate.value);
+            const multiplier = parseInt(document.querySelector('input[name="rifeMultiplier"]:checked').value);
+            const outputFps = 32; // node 77 fixe
+            const duration = ((frames * multiplier) / outputFps).toFixed(1);
+            document.getElementById('durationValue').textContent = `${duration}s`;
+            document.getElementById('durationDetail').textContent = `${frames} frames × x${multiplier} ÷ ${outputFps}fps`;
+        }
+
         // Update sliders
         sizeScale.addEventListener('input', function() {
             const percent = Math.round(this.value * 100);
@@ -620,6 +733,7 @@
 
         videoLength.addEventListener('input', function() {
             lengthValue.textContent = this.value;
+            updateDuration();
         });
 
         // Nouveaux sliders
@@ -633,6 +747,11 @@
 
         frameRate.addEventListener('input', function() {
             frameRateValue.textContent = this.value;
+            updateDuration();
+        });
+
+        document.querySelectorAll('input[name="rifeMultiplier"]').forEach(radio => {
+            radio.addEventListener('change', updateDuration);
         });
 
         motionAmplitude.addEventListener('input', function() {
@@ -653,6 +772,8 @@
             logsSection.innerHTML = '';
             progressBar.style.width = '0%';
             progressBar.textContent = '0%';
+            simulatedProgress = 10;
+            stopProgressSimulation();
             
             // Get form data
             const workflowType = parseInt(document.getElementById('workflowType').value);
@@ -692,6 +813,7 @@
                         workflow_name: "animation_image",
                         workflow_type: workflowType,
                         video_format: format === 0 ? "16:9" : "9:16",
+                        rife_multiplier: parseInt(document.querySelector('input[name="rifeMultiplier"]:checked').value),
                         size_scale: Math.round(scale * 100),
                         video_length: length,
                         user_prompt: prompt,
@@ -740,9 +862,13 @@
                 if (status === 'IN_QUEUE') {
                     updateProgress(15, 'En file d\'attente...');
                 } else if (status === 'IN_PROGRESS') {
-                    updateProgress(50, 'Génération en cours...');
+                    if (simulationInterval === null) {
+                        simulatedProgress = 20;
+                        startProgressSimulation();
+                    }
                 } else if (status === 'COMPLETED') {
                     clearInterval(pollInterval);
+                    stopProgressSimulation();
                     stopTimer();
                     
                     addLog('success', '✅ Génération terminée !');
@@ -779,6 +905,7 @@
                     
                 } else if (status === 'FAILED') {
                     clearInterval(pollInterval);
+                    stopProgressSimulation();
                     stopTimer();
                     
                     addLog('error', `❌ Échec: ${result.error || 'Erreur inconnue'}`);
@@ -804,6 +931,7 @@
                 
                 if (response.ok) {
                     clearInterval(pollInterval);
+                    stopProgressSimulation();
                     stopTimer();
                     addLog('warning', '⚠️ Génération annulée');
                     updateProgress(0, 'Annulé');

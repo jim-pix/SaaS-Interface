@@ -447,6 +447,14 @@
         <h1>🎥 Wan 2.2 Generator</h1>
         <p class="subtitle">Créez des vidéos à partir de vos images</p>
 
+        <!-- Token d'accès -->
+        <div style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #667eea;">
+            <label style="font-size: 0.9em; color: #555; margin-bottom: 6px; display: block;">🔑 Token d'accès</label>
+            <input type="password" id="tokenInput" placeholder="Entrez votre token d'accès..."
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9em;"
+                oninput="localStorage.setItem('api_token', this.value)">
+        </div>
+
         <div class="info-box">
             <p><strong>ℹ️ Information</strong></p>
             <p>Configuration RunPod requise : GPU avec 24GB+ VRAM (RTX 4090, A100)</p>
@@ -652,7 +660,12 @@
 
     <script>
         // ⚙️ CONFIGURATION - À MODIFIER
-        const BACKEND_URL = 'https://wan22-backend.fly.dev'; // ← Changez après déploiement
+        const BACKEND_URL = 'https://wan22-backend.fly.dev';
+
+        // Token utilisateur — récupéré depuis le champ de saisie
+        function getToken() {
+            return localStorage.getItem('api_token') || '';
+        }
 
         // Elements
         const form = document.getElementById('videoForm');
@@ -807,7 +820,8 @@
                 const response = await fetch(`${BACKEND_URL}/generate`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Api-Token': getToken()
                     },
                     body: JSON.stringify({
                         workflow_name: "animation_image",
@@ -854,7 +868,9 @@
 
         async function checkStatus(jobId) {
             try {
-                const response = await fetch(`${BACKEND_URL}/status/${jobId}`);
+                const response = await fetch(`${BACKEND_URL}/status/${jobId}`, {
+                    headers: { 'X-Api-Token': getToken() }
+                });
                 const result = await response.json();
                 const status = result.status;
 
@@ -926,7 +942,8 @@
             
             try {
                 const response = await fetch(`${BACKEND_URL}/cancel/${currentJobId}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'X-Api-Token': getToken() }
                 });
                 
                 if (response.ok) {
@@ -1032,6 +1049,12 @@
 
         // Initial log
         addLog('info', '🚀 Interface prête. Configurez vos paramètres et lancez la génération.');
+
+        // Pré-remplir le token si déjà sauvegardé
+        const savedToken = localStorage.getItem('api_token');
+        if (savedToken) {
+            document.getElementById('tokenInput').value = savedToken;
+        }
     </script>
 </body>
 </html>

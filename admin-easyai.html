@@ -722,7 +722,7 @@
       acceleration_low:  '⚡ Accel Low'
     };
     const typeTag = lora.lora_type && lora.lora_type !== 'standard'
-      ? \`<span class="tag" style="background:rgba(255,184,79,0.12);color:var(--warning);border:1px solid rgba(255,184,79,0.25);">\${typeLabels[lora.lora_type] || lora.lora_type}</span>\`
+      ? `<span class="tag" style="background:rgba(255,184,79,0.12);color:var(--warning);border:1px solid rgba(255,184,79,0.25);">${typeLabels[lora.lora_type] || lora.lora_type}</span>`
       : '';
 
     const catLabels = { style: 'Style', character: 'Personnage', object: 'Objet' };

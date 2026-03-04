@@ -456,7 +456,16 @@
             <label>Catégorie</label>
             <select id="f-category">
               <option value="style">Style</option>
-              <option value="character">Personnage</option>
+              <option value="character">Personnage cohérent</option>
+              <option value="object">Objet cohérent</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Type technique</label>
+            <select id="f-lora-type">
+              <option value="standard">Standard</option>
+              <option value="acceleration_high">Accélération — High Noise</option>
+              <option value="acceleration_low">Accélération — Low Noise</option>
             </select>
           </div>
           <div class="field">
@@ -650,6 +659,7 @@
       category:          document.getElementById('f-category').value,
       default_strength:  parseFloat(document.getElementById('f-strength').value),
       preview_url:       document.getElementById('f-preview').value.trim() || null,
+      lora_type:         document.getElementById('f-lora-type').value,
       trigger_words:     getTriggers()
     };
 
@@ -681,6 +691,7 @@
     document.getElementById('f-strength').value = 0.8;
     document.getElementById('f-strength-val').textContent = '0.80';
     document.getElementById('f-category').value = 'style';
+    document.getElementById('f-lora-type').value = 'standard';
     document.getElementById('triggerBuilder').innerHTML = '';
     triggerCount = 0;
   }
@@ -705,9 +716,21 @@
   }
 
   function renderLoraCard(lora) {
+    const typeLabels = {
+      standard: null,
+      acceleration_high: '⚡ Accel High',
+      acceleration_low:  '⚡ Accel Low'
+    };
+    const typeTag = lora.lora_type && lora.lora_type !== 'standard'
+      ? \`<span class="tag" style="background:rgba(255,184,79,0.12);color:var(--warning);border:1px solid rgba(255,184,79,0.25);">\${typeLabels[lora.lora_type] || lora.lora_type}</span>\`
+      : '';
+
+    const catLabels = { style: 'Style', character: 'Personnage', object: 'Objet' };
     const catTag = lora.category === 'style'
       ? `<span class="tag tag-style">Style</span>`
-      : `<span class="tag tag-character">Personnage</span>`;
+      : lora.category === 'character'
+        ? `<span class="tag tag-character">Personnage</span>`
+        : `<span class="tag" style="background:rgba(79,255,176,0.1);color:var(--success);border:1px solid rgba(79,255,176,0.2);">Objet</span>`;
     const activeTag = lora.is_active
       ? `<span class="tag tag-active">Actif</span>`
       : `<span class="tag tag-inactive">Inactif</span>`;
@@ -732,7 +755,7 @@
               onclick="deleteLora(${lora.id}, '${lora.name}')">Suppr.</button>
           </div>
         </div>
-        <div class="lora-meta">${catTag}${activeTag}</div>
+        <div class="lora-meta">${catTag}${typeTag}${activeTag}</div>
         <div class="strength-bar">
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           <span class="strength-val">${lora.default_strength.toFixed(2)}</span>

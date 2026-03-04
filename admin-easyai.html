@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyAI — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --success: #4fffb0;
+    --warning: #ffb84f;
+    --text: #e8e8f0;
+    --muted: #6a6a80;
+    --danger: #ff4f6a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .badge {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(124,106,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,106,255,0.3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* URL BAR */
+  .url-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .url-bar .field { flex: 1; margin: 0; }
+
+  /* STATUS */
+  #statusBar {
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--muted);
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-on  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .dot-off { background: var(--muted); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    cursor: pointer;
+    color: var(--muted);
+    background: transparent;
+    transition: all 0.2s;
+    position: relative;
+    bottom: -1px;
+  }
+
+  .tab:hover { color: var(--text); }
+
+  .tab.active {
+    color: var(--accent);
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* INPUTS */
+  .field { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+  select option { background: var(--surface2); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #9580ff; transform: translateY(-1px); }
+  .btn-success { background: var(--success); color: #000; }
+  .btn-success:hover { opacity: 0.85; }
+  .btn-warning { background: rgba(255,184,79,0.15); color: var(--warning); border: 1px solid rgba(255,184,79,0.3); }
+  .btn-warning:hover { background: rgba(255,184,79,0.25); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,79,106,0.3); }
+  .btn-danger:hover { background: rgba(255,79,106,0.1); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* GRID */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+  /* PANEL */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; }
+  .panel-body { padding: 24px; }
+
+  /* CARDS */
+  .card-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .lora-card, .user-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s;
+    animation: fadeIn 0.3s ease;
+  }
+  .lora-card:hover, .user-card:hover { border-color: rgba(124,106,255,0.4); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .card-sub { color: var(--muted); font-size: 11px; }
+  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+  /* TAGS */
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .tag-style     { background: rgba(124,106,255,0.15); color: var(--accent);  border: 1px solid rgba(124,106,255,0.25); }
+  .tag-character { background: rgba(255,106,155,0.15); color: var(--accent2); border: 1px solid rgba(255,106,155,0.25); }
+  .tag-inactive  { background: rgba(255,79,106,0.1);   color: var(--danger);  border: 1px solid rgba(255,79,106,0.2); }
+  .tag-active    { background: rgba(79,255,176,0.1);   color: var(--success); border: 1px solid rgba(79,255,176,0.2); }
+
+  /* STRENGTH BAR */
+  .strength-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; }
+  .strength-val { font-size: 11px; color: var(--accent); min-width: 30px; text-align: right; }
+
+  /* TRIGGERS */
+  .triggers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .trigger-pill {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    background: rgba(79,255,176,0.08); color: var(--success);
+    border: 1px solid rgba(79,255,176,0.2);
+  }
+  .trigger-label { color: var(--muted); font-size: 10px; margin-right: 3px; }
+
+  /* TRIGGER BUILDER */
+  .trigger-builder { display: flex; flex-direction: column; gap: 8px; }
+  .trigger-row { display: flex; gap: 8px; align-items: center; animation: fadeIn 0.2s ease; }
+  .trigger-row input { flex: 1; }
+  .trigger-remove {
+    background: none; border: 1px solid rgba(255,79,106,0.3); color: var(--danger);
+    border-radius: 6px; width: 32px; height: 32px; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s;
+  }
+  .trigger-remove:hover { background: rgba(255,79,106,0.15); }
+  .add-trigger {
+    font-size: 11px; color: var(--accent); background: none;
+    border: 1px dashed rgba(124,106,255,0.4); border-radius: 6px;
+    padding: 7px; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s;
+  }
+  .add-trigger:hover { background: rgba(124,106,255,0.08); border-style: solid; }
+
+  /* RANGE */
+  input[type="range"] {
+    padding: 0; height: 4px; -webkit-appearance: none;
+    background: var(--border); border-radius: 2px; border: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); border: 2px solid var(--bg);
+  }
+  .range-wrap { display: flex; align-items: center; gap: 12px; }
+  .range-wrap input[type="range"] { flex: 1; }
+  .range-val { font-size: 13px; color: var(--accent); min-width: 32px; text-align: right; }
+
+  /* USER STATS */
+  .user-stats {
+    display: flex;
+    gap: 16px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-val { font-size: 16px; font-family: 'Syne', sans-serif; font-weight: 700; color: var(--text); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* QUOTA BAR */
+  .quota-bar { margin: 10px 0; }
+  .quota-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+  .quota-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+  /* TOKEN DISPLAY */
+  .token-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .token-val { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .copy-btn {
+    background: none; border: none; color: var(--accent); cursor: pointer;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace; padding: 2px 6px;
+    border-radius: 4px; transition: background 0.2s; flex-shrink: 0;
+  }
+  .copy-btn:hover { background: rgba(124,106,255,0.15); }
+
+  /* INLINE QUOTA EDIT */
+  .quota-edit { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .quota-edit input { width: 70px; padding: 6px 10px; font-size: 12px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 12px; font-weight: 500;
+    z-index: 9999; animation: slideUp 0.3s ease; max-width: 320px;
+    display: none;
+  }
+  .toast-success { background: var(--success); color: #000; }
+  .toast-error   { background: var(--danger);  color: #fff; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* MISC */
+  .empty { text-align: center; padding: 40px 24px; color: var(--muted); }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .empty p { font-size: 12px; }
+
+  .spin {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: rotate 0.7s linear infinite;
+  }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted); margin-bottom: 16px;
+  }
+
+  .lora-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="logo">Easy<span>AI</span></div>
+    <div class="badge">Admin Panel</div>
+  </header>
+
+  <!-- CONFIG BAR -->
+  <div class="url-bar">
+    <div class="field">
+      <label>URL API Fly.io</label>
+      <input type="text" id="apiUrl" placeholder="https://ton-app.fly.dev" />
+    </div>
+    <div class="field">
+      <label>Admin Secret</label>
+      <input type="password" id="adminSecret" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary" onclick="connect()">Connecter</button>
+  </div>
+
+  <div id="statusBar">
+    <div class="dot dot-off" id="statusDot"></div>
+    <span id="statusText">Non connecté</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('loras', this)">🧩 LoRAs</button>
+    <button class="tab" onclick="switchTab('users', this)">👥 Utilisateurs</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB : LORAS                               -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="tab-panel active" id="tab-loras">
+    <div class="grid">
+
+      <!-- FORMULAIRE AJOUT LORA -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Ajouter un LoRA</div>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Nom</label>
+            <input type="text" id="f-name" placeholder="Cinematic Style" />
+          </div>
+          <div class="field">
+            <label>Fichier (.safetensors)</label>
+            <input type="text" id="f-filename" placeholder="cinematic.safetensors" />
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea id="f-description" placeholder="Optionnel — affiché à l'utilisateur"></textarea>
+          </div>
+          <div class="field">
+            <label>Catégorie</label>
+            <select id="f-category">
+              <option value="style">Style</option>
+              <option value="character">Personnage</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Strength par défaut</label>
+            <div class="range-wrap">
+              <input type="range" id="f-strength" min="0" max="1" step="0.05" value="0.8"
+                oninput="document.getElementById('f-strength-val').textContent = parseFloat(this.value).toFixed(2)" />
+              <span class="range-val" id="f-strength-val">0.80</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Preview URL <span style="color:var(--muted)">(optionnel)</span></label>
+            <input type="text" id="f-preview" placeholder="https://..." />
+          </div>
+          <div class="divider"></div>
+          <div class="section-title">Trigger Words</div>
+          <div class="trigger-builder" id="triggerBuilder"></div>
+          <button class="add-trigger" onclick="addTrigger()" style="margin-top:8px;">
+            + Ajouter un trigger word
+          </button>
+          <div style="margin-top:24px;">
+            <button class="btn btn-success" onclick="submitLora()" id="submitLoraBtn" style="width:100%;justify-content:center;">
+              Ajouter le LoRA
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CATALOGUE LORAS -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Catalogue</div>
+          <button class="btn btn-ghost" onclick="loadLoras()" style="padding:6px 14px;font-size:11px;">↻ Rafraîchir</button>
+        </div>
+        <div class="panel-body">
+          <div id="lorasList">
+            <div class="empty">
+              <div class="empty-icon">🧩</div>
+              <p>Connecte-toi pour voir<br>les LoRAs disponibles</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB : USERS                               -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-users">
+    <div class="grid">
+
+      <!-- FORMULAIRE CRÉATION USER -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Créer un utilisateur</div>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="u-email" placeholder="user@example.com" />
+          </div>
+          <div class="field">
+            <label>Quota journalier (vidéos/jour)</label>
+            <div class="range-wrap">
+              <input type="range" id="u-quota" min="1" max="20" step="1" value="3"
+                oninput="document.getElementById('u-quota-val').textContent = this.value" />
+              <span class="range-val" id="u-quota-val">3</span>
+            </div>
+          </div>
+          <div style="margin-top:24px;">
+            <button class="btn btn-success" onclick="submitUser()" id="submitUserBtn" style="width:100%;justify-content:center;">
+              Créer l'utilisateur
+            </button>
+          </div>
+
+          <!-- Token résultat -->
+          <div id="newTokenBox" style="display:none; margin-top:20px;">
+            <div class="divider"></div>
+            <div class="section-title">Token généré</div>
+            <p style="color:var(--muted);font-size:11px;margin-bottom:8px;">Copie ce token et envoie-le à l'utilisateur.</p>
+            <div class="token-box">
+              <span class="token-val" id="newTokenVal"></span>
+              <button class="copy-btn" onclick="copyToken('newTokenVal')">Copier</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LISTE USERS -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Utilisateurs</div>
+          <button class="btn btn-ghost" onclick="loadUsers()" style="padding:6px 14px;font-size:11px;">↻ Rafraîchir</button>
+        </div>
+        <div class="panel-body">
+          <div id="usersList">
+            <div class="empty">
+              <div class="empty-icon">👥</div>
+              <p>Connecte-toi pour voir<br>les utilisateurs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+  let API_URL = '';
+  let ADMIN_SECRET = '';
+  let connected = false;
+
+  // ── TABS ──
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+    if (connected) {
+      if (name === 'loras') loadLoras();
+      if (name === 'users') loadUsers();
+    }
+  }
+
+  // ── CONNECT ──
+  function connect() {
+    API_URL = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+    ADMIN_SECRET = document.getElementById('adminSecret').value.trim();
+    if (!API_URL || !ADMIN_SECRET) { toast('Remplis l\'URL et le secret', 'error'); return; }
+    loadLoras();
+  }
+
+  function setConnected(ok, msg) {
+    connected = ok;
+    const bar = document.getElementById('statusBar');
+    bar.style.display = 'flex';
+    document.getElementById('statusDot').className = `dot ${ok ? 'dot-on' : 'dot-off'}`;
+    document.getElementById('statusText').textContent = msg;
+  }
+
+  // ══════════════════════════════════════════
+  // LORAS
+  // ══════════════════════════════════════════
+
+  let triggerCount = 0;
+
+  function addTrigger(label = '', word = '') {
+    const id = ++triggerCount;
+    const builder = document.getElementById('triggerBuilder');
+    const row = document.createElement('div');
+    row.className = 'trigger-row';
+    row.id = `trigger-${id}`;
+    row.innerHTML = `
+      <input type="text" placeholder="Label (ex: Cinématique)" value="${label}" id="t-label-${id}" />
+      <input type="text" placeholder="Word (ex: cine_v2)" value="${word}" id="t-word-${id}" />
+      <button class="trigger-remove" onclick="removeTrigger(${id})">×</button>
+    `;
+    builder.appendChild(row);
+  }
+
+  function removeTrigger(id) {
+    document.getElementById(`trigger-${id}`)?.remove();
+  }
+
+  function getTriggers() {
+    return Array.from(document.querySelectorAll('.trigger-row')).map(row => {
+      const id = row.id.replace('trigger-', '');
+      return {
+        label: document.getElementById(`t-label-${id}`)?.value.trim() || '',
+        word:  document.getElementById(`t-word-${id}`)?.value.trim()  || ''
+      };
+    }).filter(t => t.label && t.word);
+  }
+
+  async function submitLora() {
+    if (!connected) { toast('Connecte-toi d\'abord', 'error'); return; }
+    const name = document.getElementById('f-name').value.trim();
+    const filename = document.getElementById('f-filename').value.trim();
+    if (!name || !filename) { toast('Nom et fichier obligatoires', 'error'); return; }
+
+    const payload = {
+      name, filename,
+      description:       document.getElementById('f-description').value.trim() || null,
+      category:          document.getElementById('f-category').value,
+      default_strength:  parseFloat(document.getElementById('f-strength').value),
+      preview_url:       document.getElementById('f-preview').value.trim() || null,
+      trigger_words:     getTriggers()
+    };
+
+    const btn = document.getElementById('submitLoraBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Envoi...';
+
+    try {
+      const res = await fetch(`${API_URL}/admin/loras`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erreur');
+      toast(`✓ LoRA "${name}" ajouté !`, 'success');
+      resetLoraForm();
+      loadLoras();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Ajouter le LoRA';
+    }
+  }
+
+  function resetLoraForm() {
+    ['f-name','f-filename','f-description','f-preview'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-strength').value = 0.8;
+    document.getElementById('f-strength-val').textContent = '0.80';
+    document.getElementById('f-category').value = 'style';
+    document.getElementById('triggerBuilder').innerHTML = '';
+    triggerCount = 0;
+  }
+
+  async function loadLoras() {
+    const list = document.getElementById('lorasList');
+    list.innerHTML = `<div class="empty"><div class="spin" style="margin:0 auto 12px;"></div><p>Chargement...</p></div>`;
+    try {
+      const res = await fetch(`${API_URL}/admin/loras`, { headers: { 'X-Admin-Secret': ADMIN_SECRET } });
+      if (!res.ok) throw new Error('Accès refusé ou erreur serveur');
+      const loras = await res.json();
+      setConnected(true, `Connecté — ${loras.length} LoRA(s)`);
+      if (!loras.length) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">🧩</div><p>Aucun LoRA dans le catalogue</p></div>`;
+        return;
+      }
+      list.innerHTML = `<div class="card-list">${loras.map(renderLoraCard).join('')}</div>`;
+    } catch(e) {
+      setConnected(false, 'Erreur de connexion');
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    }
+  }
+
+  function renderLoraCard(lora) {
+    const catTag = lora.category === 'style'
+      ? `<span class="tag tag-style">Style</span>`
+      : `<span class="tag tag-character">Personnage</span>`;
+    const activeTag = lora.is_active
+      ? `<span class="tag tag-active">Actif</span>`
+      : `<span class="tag tag-inactive">Inactif</span>`;
+    const pct = Math.round(lora.default_strength * 100);
+    const triggers = (lora.trigger_words || []).map(t =>
+      `<span class="trigger-pill"><span class="trigger-label">${t.label}:</span>${t.word}</span>`
+    ).join('');
+
+    return `
+      <div class="lora-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${lora.name}</div>
+            <div class="card-sub">${lora.filename}</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost" style="padding:5px 10px;font-size:10px;"
+              onclick="toggleLora(${lora.id}, ${lora.is_active})">
+              ${lora.is_active ? 'Désactiver' : 'Activer'}
+            </button>
+            <button class="btn btn-danger" style="padding:5px 10px;font-size:10px;"
+              onclick="deleteLora(${lora.id}, '${lora.name}')">Suppr.</button>
+          </div>
+        </div>
+        <div class="lora-meta">${catTag}${activeTag}</div>
+        <div class="strength-bar">
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <span class="strength-val">${lora.default_strength.toFixed(2)}</span>
+        </div>
+        ${triggers ? `<div class="triggers">${triggers}</div>` : ''}
+        ${lora.description ? `<div style="margin-top:8px;color:var(--muted);font-size:11px;">${lora.description}</div>` : ''}
+      </div>`;
+  }
+
+  async function deleteLora(id, name) {
+    if (!confirm(`Supprimer "${name}" ?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/loras/${id}`, {
+        method: 'DELETE', headers: { 'X-Admin-Secret': ADMIN_SECRET }
+      });
+      if (!res.ok) throw new Error('Erreur suppression');
+      toast(`✓ "${name}" supprimé`, 'success');
+      loadLoras();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function toggleLora(id, current) {
+    try {
+      const res = await fetch(`${API_URL}/admin/loras/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+        body: JSON.stringify({ is_active: current ? 0 : 1 })
+      });
+      if (!res.ok) throw new Error('Erreur');
+      toast(current ? 'LoRA désactivé' : 'LoRA activé', 'success');
+      loadLoras();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ══════════════════════════════════════════
+  // USERS
+  // ══════════════════════════════════════════
+
+  async function submitUser() {
+    if (!connected) { toast('Connecte-toi d\'abord', 'error'); return; }
+    const email = document.getElementById('u-email').value.trim();
+    if (!email) { toast('Email obligatoire', 'error'); return; }
+    const quota_daily = parseInt(document.getElementById('u-quota').value);
+
+    const btn = document.getElementById('submitUserBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Création...';
+
+    try {
+      const res = await fetch(`${API_URL}/admin/create-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
+        body: JSON.stringify({ email, quota_daily })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erreur');
+      toast(`✓ Utilisateur "${email}" créé !`, 'success');
+      document.getElementById('u-email').value = '';
+      // Affiche le token
+      document.getElementById('newTokenVal').textContent = data.token;
+      document.getElementById('newTokenBox').style.display = 'block';
+      loadUsers();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Créer l\'utilisateur';
+    }
+  }
+
+  async function loadUsers() {
+    const list = document.getElementById('usersList');
+    list.innerHTML = `<div class="empty"><div class="spin" style="margin:0 auto 12px;"></div><p>Chargement...</p></div>`;
+    try {
+      const res = await fetch(`${API_URL}/admin/users`, { headers: { 'X-Admin-Secret': ADMIN_SECRET } });
+      if (!res.ok) throw new Error('Accès refusé ou erreur serveur');
+      const users = await res.json();
+      setConnected(true, `Connecté — ${users.length} utilisateur(s)`);
+      if (!users.length) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><p>Aucun utilisateur</p></div>`;
+        return;
+      }
+      list.innerHTML = `<div class="card-list">${users.map(renderUserCard).join('')}</div>`;
+    } catch(e) {
+      setConnected(false, 'Erreur de connexion');
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    }
+  }
+
+  function renderUserCard(user) {
+    const activeTag = user.active
+      ? `<span class="tag tag-active">Actif</span>`
+      : `<span class="tag tag-inactive">Inactif</span>`;
+
+    const used = user.videos_today || 0;
+    const quota = user.quota_daily || 1;
+    const pct = Math.min(100, Math.round((used / quota) * 100));
+    const barColor = pct >= 100 ? 'var(--danger)' : pct >= 75 ? 'var(--warning)' : 'var(--success)';
+
+    return `
+      <div class="user-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${user.email}</div>
+            <div class="card-sub">Créé le ${user.created_at ? user.created_at.split('T')[0] : '—'}</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn ${user.active ? 'btn-warning' : 'btn-ghost'}" style="padding:5px 10px;font-size:10px;"
+              onclick="toggleUser('${user.email}', ${user.active})">
+              ${user.active ? 'Désactiver' : 'Activer'}
+            </button>
+            <button class="btn btn-danger" style="padding:5px 10px;font-size:10px;"
+              onclick="deleteUser('${user.email}')">Suppr.</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:10px;">${activeTag}</div>
+
+        <div class="user-stats">
+          <div class="stat">
+            <div class="stat-val">${used}</div>
+            <div class="stat-label">Vidéos aujourd'hui</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">${quota}</div>
+            <div class="stat-label">Quota / jour</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" style="color:${quota - used > 0 ? 'var(--success)' : 'var(--danger)'}">
+              ${Math.max(0, quota - used)}
+            </div>
+            <div class="stat-label">Restant</div>
+          </div>
+        </div>
+
+        <div class="quota-bar">
+          <div class="quota-track">
+            <div class="quota-fill" style="width:${pct}%; background:${barColor};"></div>
+          </div>
+        </div>
+
+        <div class="quota-edit">
+          <label style="margin:0; white-space:nowrap;">Nouveau quota :</label>
+          <input type="number" min="1" max="100" value="${quota}" id="q-${user.email.replace(/[@.]/g,'_')}" />
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px;"
+            onclick="updateQuota('${user.email}')">Mettre à jour</button>
+        </div>
+      </div>`;
+  }
+
+  async function toggleUser(email, current) {
+    const route = current ? 'deactivate-user' : 'activate-user';
+    try {
+      const res = await fetch(`${API_URL}/admin/${route}?email=${encodeURIComponent(email)}`, {
+        method: 'POST', headers: { 'X-Admin-Secret': ADMIN_SECRET }
+      });
+      if (!res.ok) throw new Error('Erreur');
+      toast(current ? `${email} désactivé` : `${email} activé`, 'success');
+      loadUsers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function deleteUser(email) {
+    if (!confirm(`Supprimer définitivement "${email}" ?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/delete-user?email=${encodeURIComponent(email)}`, {
+        method: 'DELETE', headers: { 'X-Admin-Secret': ADMIN_SECRET }
+      });
+      if (!res.ok) throw new Error('Erreur suppression');
+      toast(`✓ "${email}" supprimé`, 'success');
+      loadUsers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function updateQuota(email) {
+    const key = email.replace(/[@.]/g, '_');
+    const quota = parseInt(document.getElementById(`q-${key}`).value);
+    if (!quota || quota < 1) { toast('Quota invalide', 'error'); return; }
+    try {
+      const res = await fetch(`${API_URL}/admin/update-quota?email=${encodeURIComponent(email)}&quota_daily=${quota}`, {
+        method: 'POST', headers: { 'X-Admin-Secret': ADMIN_SECRET }
+      });
+      if (!res.ok) throw new Error('Erreur mise à jour');
+      toast(`✓ Quota de ${email} → ${quota}/jour`, 'success');
+      loadUsers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── UTILS ──
+  function copyToken(id) {
+    const val = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(val).then(() => toast('Token copié !', 'success'));
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast toast-${type}`;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3500);
+  }
+
+  // ── INIT ──
+  window.onload = () => {
+    const savedUrl    = localStorage.getItem('easyai_url');
+    const savedSecret = localStorage.getItem('easyai_secret');
+    if (savedUrl)    document.getElementById('apiUrl').value      = savedUrl;
+    if (savedSecret) document.getElementById('adminSecret').value = savedSecret;
+    document.getElementById('apiUrl').oninput      = e => localStorage.setItem('easyai_url', e.target.value);
+    document.getElementById('adminSecret').oninput = e => localStorage.setItem('easyai_secret', e.target.value);
+  };
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wan 2.2 Video Generator</title>
+    <title>EasyAI</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0a0a0a;
             min-height: 100vh;
             padding: 20px;
         }
@@ -21,22 +21,23 @@
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: white;
+            background: #1c1c1c;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 2px #cc0000;
             padding: 40px;
+            border: 2px solid #cc0000;
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: #ffffff;
             margin-bottom: 10px;
             font-size: 2.5em;
         }
 
         .subtitle {
             text-align: center;
-            color: #666;
+            color: #aaaaaa;
             margin-bottom: 40px;
             font-size: 1.1em;
         }
@@ -48,7 +49,7 @@
         label {
             display: block;
             margin-bottom: 10px;
-            color: #333;
+            color: #dddddd;
             font-weight: 600;
             font-size: 1.1em;
         }
@@ -56,11 +57,13 @@
         select, input[type="text"], input[type="range"], textarea {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #333;
             border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s;
             font-family: inherit;
+            background: #252525;
+            color: #dddddd;
         }
 
         textarea {
@@ -70,7 +73,7 @@
 
         select:focus, input[type="text"]:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #4a4a4a;
         }
 
         .radio-group {
@@ -92,18 +95,19 @@
         .radio-option label {
             display: block;
             padding: 15px;
-            background: #f5f5f5;
-            border: 2px solid #e0e0e0;
+            background: #252525;
+            border: 2px solid #3a3a3a;
             border-radius: 8px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            color: #dddddd;
         }
 
         .radio-option input[type="radio"]:checked + label {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
+            background: #4a4a4a;
+            color: #ffffff;
+            border-color: #888888;
         }
 
         .file-upload {
@@ -120,8 +124,8 @@
         .file-upload-label {
             display: block;
             padding: 20px;
-            background: #f5f5f5;
-            border: 2px dashed #667eea;
+            background: #1e1e1e;
+            border: 2px dashed #4a4a4a;
             border-radius: 8px;
             text-align: center;
             cursor: pointer;
@@ -129,8 +133,8 @@
         }
 
         .file-upload-label:hover {
-            background: #e8eaf6;
-            border-color: #5568d3;
+            background: #252535;
+            border-color: #555555;
         }
 
         .file-upload-label.has-file {
@@ -152,7 +156,7 @@
 
         .slider-value {
             display: inline-block;
-            background: #667eea;
+            background: #4a4a4a;
             color: white;
             padding: 5px 15px;
             border-radius: 20px;
@@ -172,7 +176,7 @@
             -webkit-appearance: none;
             width: 20px;
             height: 20px;
-            background: #667eea;
+            background: #4a4a4a;
             border-radius: 50%;
             cursor: pointer;
         }
@@ -180,7 +184,7 @@
         input[type="range"]::-moz-range-thumb {
             width: 20px;
             height: 20px;
-            background: #667eea;
+            background: #4a4a4a;
             border-radius: 50%;
             cursor: pointer;
             border: none;
@@ -189,7 +193,7 @@
         .generate-btn {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0a0a0a;
             color: white;
             border: none;
             border-radius: 10px;
@@ -273,7 +277,7 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #4a4a4a 0%, #3a3a3a 100%);
             width: 0%;
             transition: width 0.5s;
             display: flex;
@@ -329,7 +333,7 @@
             text-align: center;
             display: none;
             padding: 20px;
-            background: #f5f5f5;
+            background: #1a1a1a;
             border-radius: 10px;
         }
 
@@ -365,7 +369,7 @@
         }
 
         .info-box {
-            background: #e8f5e9;
+            background: #0d2010;
             border-left: 4px solid #4caf50;
             padding: 15px;
             margin-bottom: 30px;
@@ -373,7 +377,7 @@
         }
 
         .info-box p {
-            color: #2e7d32;
+            color: #6fcf6f;
             margin: 5px 0;
         }
 
@@ -396,35 +400,36 @@
         .multiplier-option label {
             display: block;
             padding: 10px;
-            background: #f5f5f5;
-            border: 2px solid #e0e0e0;
+            background: #252525;
+            border: 2px solid #3a3a3a;
             border-radius: 8px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 600;
+            color: #dddddd;
         }
 
         .multiplier-option input[type="radio"]:checked + label {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
+            background: #4a4a4a;
+            color: #ffffff;
+            border-color: #888888;
         }
 
         .duration-box {
             margin-top: 15px;
             padding: 12px 16px;
-            background: linear-gradient(135deg, #e8eaf6, #f3e5f5);
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #4a4a4a;
             font-size: 0.95em;
-            color: #333;
+            color: #cccccc;
         }
 
         .duration-box .duration-value {
             font-size: 1.4em;
             font-weight: 700;
-            color: #667eea;
+            color: #4a4a4a;
         }
 
         /* Scrollbar personnalisé pour les logs */
@@ -437,21 +442,21 @@
         }
 
         .logs-section::-webkit-scrollbar-thumb {
-            background: #667eea;
+            background: #4a4a4a;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 Wan 2.2 Generator</h1>
-        <p class="subtitle">Créez des vidéos à partir de vos images</p>
+        <h1>✨ EasyAI</h1>
+        <p class="subtitle">Transformez vos images en vidéos professionnelles</p>
 
         <!-- Token d'accès -->
-        <div style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #667eea;">
-            <label style="font-size: 0.9em; color: #555; margin-bottom: 6px; display: block;">🔑 Token d'accès</label>
+        <div style="margin-bottom: 20px; padding: 12px; background: #1a1a2e; border-radius: 8px; border-left: 4px solid #4a4a4a;">
+            <label style="font-size: 0.9em; color: #aaa; margin-bottom: 6px; display: block;">🔑 Token d'accès</label>
             <input type="password" id="tokenInput" placeholder="Entrez votre token d'accès..."
-                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9em;"
+                style="width: 100%; padding: 8px; border: 1px solid #333; border-radius: 6px; font-size: 0.9em; background: #1e1e1e; color: #dddddd;"
                 oninput="localStorage.setItem('api_token', this.value)">
         </div>
 
@@ -565,7 +570,7 @@
             <!-- Réglages avancés -->
             <div class="form-group">
                 <details style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
-                    <summary style="cursor: pointer; font-weight: 600; color: #667eea; user-select: none;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #4a4a4a; user-select: none;">
                         ⚙️ Réglages avancés
                     </summary>
                     <div style="margin-top: 20px;">
@@ -618,6 +623,20 @@
                 ></textarea>
             </div>
 
+
+            <!-- Section LoRAs (admin uniquement) -->
+            <div id="loraSection" style="display:none; margin-bottom: 20px;">
+                <div style="padding: 14px; background: #0d1117; border-radius: 10px; border: 1px solid #2a2a4a;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <label style="color:#7c6aff; font-size:0.9em; font-weight:600; margin:0;">🎨 LoRAs</label>
+                        <span style="font-size:0.75em; color:#666;" id="loraCount">0 sélectionné(s)</span>
+                    </div>
+                    <div id="loraList" style="display:flex; flex-direction:column; gap:8px;">
+                        <p style="color:#666; font-size:0.85em; text-align:center; padding:12px 0;">Chargement des LoRAs...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Submit -->
             <button type="submit" class="generate-btn" id="generateBtn">
                 🚀 Générer la vidéo
@@ -651,7 +670,7 @@
                 <button onclick="downloadVideo()" class="download-btn" id="downloadBtn">
                     📥 Télécharger la vidéo
                 </button>
-                <a href="#" class="download-btn" id="openBtn" target="_blank" style="background: #667eea;">
+                <a href="#" class="download-btn" id="openBtn" target="_blank" style="background: #4a4a4a;">
                     🔗 Ouvrir dans le navigateur
                 </a>
             </div>
@@ -835,7 +854,8 @@
                         frame_rate: parseInt(frameRate.value),
                         motion_amplitude: parseFloat(motionAmplitude.value),
                         color_protect: colorProtect.checked,
-                        correct_strength: parseFloat(correctStrength.value)
+                        correct_strength: parseFloat(correctStrength.value),
+                        loras: getSelectedLoras()
                     })
                 });
 
@@ -1055,6 +1075,124 @@
         if (savedToken) {
             document.getElementById('tokenInput').value = savedToken;
         }
+
+        // Charger infos user (admin check)
+        loadUserInfo();
+
+        // ── ADMIN : LoRAs ──────────────────────────────
+        let availableLoras = [];
+        let selectedLoras = {}; // { lora_id: strength }
+
+        async function loadUserInfo() {
+            const token = getToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${BACKEND_URL}/me`, {
+                    headers: { 'X-Api-Token': token }
+                });
+                if (!res.ok) return;
+                const user = await res.json();
+                if (user.is_admin) {
+                    document.getElementById('loraSection').style.display = 'block';
+                    await loadLoras();
+                }
+            } catch(e) {
+                console.log('Could not load user info:', e);
+            }
+        }
+
+        async function loadLoras() {
+            const token = getToken();
+            try {
+                const res = await fetch(`${BACKEND_URL}/loras`, {
+                    headers: { 'X-Api-Token': token }
+                });
+                if (!res.ok) return;
+                availableLoras = await res.json();
+                renderLoras();
+            } catch(e) {
+                console.log('Could not load loras:', e);
+            }
+        }
+
+        function renderLoras() {
+            const container = document.getElementById('loraList');
+            if (!availableLoras.length) {
+                container.innerHTML = '<p style="color:#666; font-size:0.85em; text-align:center; padding:12px 0;">Aucun LoRA disponible</p>';
+                return;
+            }
+
+            const catLabels = { style: '🎨 Style', character: '👤 Personnage', object: '📦 Objet' };
+            const typeLabels = { standard: '', acceleration_high: '⚡H', acceleration_low: '⚡L' };
+
+            container.innerHTML = availableLoras.map(lora => {
+                const isSelected = selectedLoras[lora.id] !== undefined;
+                const strength = selectedLoras[lora.id] ?? lora.default_strength;
+                const typeTag = lora.lora_type !== 'standard'
+                    ? `<span style="font-size:10px; padding:1px 6px; border-radius:10px; background:rgba(255,184,79,0.15); color:#ffb84f; margin-left:4px;">${typeLabels[lora.lora_type]}</span>`
+                    : '';
+                const catTag = `<span style="font-size:10px; padding:1px 6px; border-radius:10px; background:rgba(124,106,255,0.15); color:#7c6aff;">${catLabels[lora.category] || lora.category}</span>`;
+
+                return `
+                <div style="background:${isSelected ? 'rgba(124,106,255,0.1)' : '#1a1a2e'}; border:1px solid ${isSelected ? '#7c6aff' : '#2a2a4a'}; border-radius:8px; padding:10px; transition:all 0.2s;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:${isSelected ? '8px' : '0'};">
+                        <input type="checkbox" id="lora_${lora.id}"
+                            ${isSelected ? 'checked' : ''}
+                            onchange="toggleLora(${lora.id}, ${lora.default_strength})"
+                            style="width:15px; height:15px; accent-color:#7c6aff; cursor:pointer;">
+                        <label for="lora_${lora.id}" style="flex:1; cursor:pointer; font-size:0.88em; color:#ddd; margin:0;">
+                            <strong>${lora.name}</strong>${typeTag}
+                        </label>
+                        <div style="display:flex; gap:4px;">${catTag}</div>
+                    </div>
+                    ${isSelected ? `
+                    <div style="display:flex; align-items:center; gap:8px; padding-left:23px;">
+                        <span style="font-size:11px; color:#666;">Strength</span>
+                        <input type="range" min="0" max="1" step="0.05" value="${strength}"
+                            oninput="updateStrength(${lora.id}, this.value); this.nextElementSibling.textContent = parseFloat(this.value).toFixed(2)"
+                            style="flex:1; height:3px; accent-color:#7c6aff;">
+                        <span style="font-size:11px; color:#7c6aff; min-width:28px;">${parseFloat(strength).toFixed(2)}</span>
+                    </div>` : ''}
+                    ${lora.description ? `<p style="font-size:0.78em; color:#555; margin:4px 0 0 23px;">${lora.description}</p>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function toggleLora(loraId, defaultStrength) {
+            if (selectedLoras[loraId] !== undefined) {
+                delete selectedLoras[loraId];
+            } else {
+                selectedLoras[loraId] = defaultStrength;
+            }
+            updateLoraCount();
+            renderLoras();
+        }
+
+        function updateStrength(loraId, value) {
+            selectedLoras[loraId] = parseFloat(value);
+        }
+
+        function updateLoraCount() {
+            const count = Object.keys(selectedLoras).length;
+            document.getElementById('loraCount').textContent = `${count} sélectionné(s)`;
+        }
+
+        function getSelectedLoras() {
+            return availableLoras
+                .filter(l => selectedLoras[l.id] !== undefined)
+                .map(l => ({
+                    filename: l.filename,
+                    lora_type: l.lora_type,
+                    strength: selectedLoras[l.id]
+                }));
+        }
+
+        // Recharger les LoRAs si le token change
+        document.getElementById('tokenInput').addEventListener('change', () => {
+            selectedLoras = {};
+            loadUserInfo();
+        });
+
     </script>
 </body>
 </html>

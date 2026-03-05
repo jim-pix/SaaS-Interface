@@ -1045,10 +1045,12 @@
                         const videoUrl = output.download_url;
                         addLog('success', `📹 Vidéo disponible !`);
                         displayVideo(videoUrl);
+                        saveGeneration(jobId, videoUrl, window.job_input_prompt || '');
                     } else if (output && output.video_urls && output.video_urls.length > 0) {
                         const videoUrl = output.video_urls[0];
                         addLog('success', `📹 Vidéo disponible !`);
                         displayVideo(videoUrl);
+                        saveGeneration(jobId, videoUrl, window.job_input_prompt || '');
                     } else {
                         addLog('warning', '⚠️ Vidéo générée mais URL non disponible');
                         addLog('info', 'La vidéo est sauvegardée dans votre volume RunPod');

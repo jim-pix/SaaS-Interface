@@ -441,6 +441,103 @@
             background: #2d2d2d;
         }
 
+
+        /* ── ONGLETS ── */
+        .tabs-nav {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #2a2a3a;
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            font-family: inherit;
+            font-size: 0.9em;
+            font-weight: 600;
+            padding: 10px 20px;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            color: #666;
+            background: transparent;
+            transition: all 0.2s;
+            position: relative;
+            bottom: -1px;
+        }
+        .tab-btn:hover { color: #ccc; }
+        .tab-btn.active {
+            color: #7c6aff;
+            background: #111122;
+            border-color: #2a2a3a;
+            border-bottom-color: #111122;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── GALERIE ── */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .gallery-card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .gallery-card:hover { border-color: #7c6aff; transform: translateY(-2px); }
+        .gallery-video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            display: block;
+            background: #0d0d1a;
+        }
+        .gallery-card-body { padding: 10px; }
+        .gallery-date { font-size: 0.75em; color: #555; margin-bottom: 6px; }
+        .gallery-dl-btn {
+            width: 100%;
+            padding: 7px;
+            background: #2a2a4a;
+            color: #aaa;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .gallery-dl-btn:hover { background: #7c6aff; color: #fff; }
+        .gallery-empty {
+            text-align: center;
+            padding: 48px 24px;
+            color: #444;
+            grid-column: 1/-1;
+        }
+        .gallery-empty p { font-size: 0.9em; margin-top: 8px; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .page-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #2a2a3a;
+            background: #1a1a2e;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { border-color: #7c6aff; color: #7c6aff; }
+        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .page-info { font-size: 0.85em; color: #555; }
         .logs-section::-webkit-scrollbar-thumb {
             background: #4a4a4a;
             border-radius: 4px;
@@ -452,6 +549,13 @@
         <h1>✨ EasyAI</h1>
         <p class="subtitle">Transformez vos images en vidéos professionnelles</p>
 
+        <!-- Onglets -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('generate', this)">🚀 Générer</button>
+            <button class="tab-btn" onclick="switchTab('gallery', this)" id="galleryTabBtn">🎬 Mes vidéos</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-generate">
         <!-- Token d'accès -->
         <div style="margin-bottom: 20px; padding: 12px; background: #1a1a2e; border-radius: 8px; border-left: 4px solid #4a4a4a;">
             <label style="font-size: 0.9em; color: #aaa; margin-bottom: 6px; display: block;">🔑 Token d'accès</label>
@@ -675,8 +779,21 @@
                 </a>
             </div>
         </div>
-    </div>
+        </div><!-- end tab-generate -->
 
+        <!-- TAB GALERIE -->
+        <div class="tab-panel" id="tab-gallery">
+            <div id="galleryContent">
+                <div class="gallery-empty"><p>Connecte-toi avec ton token pour voir tes vidéos</p></div>
+            </div>
+            <div class="pagination" id="galleryPagination" style="display:none;">
+                <button class="page-btn" id="prevPage" onclick="galleryPage(-1)">← Précédent</button>
+                <span class="page-info" id="pageInfo">Page 1</span>
+                <button class="page-btn" id="nextPage" onclick="galleryPage(1)">Suivant →</button>
+            </div>
+        </div>
+
+    </div>
     <script>
         // ⚙️ CONFIGURATION - À MODIFIER
         const BACKEND_URL = 'https://wan22-backend.fly.dev';
@@ -830,6 +947,7 @@
             // Disable button
             generateBtn.disabled = true;
             cancelBtn.style.display = 'block';
+            window.job_input_prompt = prompt;
 
             try {
                 addLog('info', '📤 Envoi de la requête au serveur...');
@@ -1185,6 +1303,116 @@
                     lora_type: l.lora_type,
                     strength: selectedLoras[l.id]
                 }));
+        }
+
+
+        // ── ONGLETS ────────────────────────────────
+        function switchTab(name, el) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+            if (name === 'gallery') loadGallery();
+        }
+
+        // ── GALERIE ────────────────────────────────
+        let galleryCurrentPage = 1;
+        let galleryTotalPages = 1;
+
+        async function loadGallery(page = 1) {
+            const token = getToken();
+            if (!token) {
+                document.getElementById('galleryContent').innerHTML =
+                    '<div class="gallery-empty"><p>Entre ton token d'accès pour voir tes vidéos</p></div>';
+                return;
+            }
+            galleryCurrentPage = page;
+            document.getElementById('galleryContent').innerHTML =
+                '<div class="gallery-empty"><p>⏳ Chargement...</p></div>';
+            try {
+                const res = await fetch(`${BACKEND_URL}/my-generations?page=${page}`, {
+                    headers: { 'X-Api-Token': token }
+                });
+                if (!res.ok) throw new Error('Erreur chargement');
+                const data = await res.json();
+                galleryTotalPages = data.pages;
+                renderGallery(data);
+            } catch(e) {
+                document.getElementById('galleryContent').innerHTML =
+                    `<div class="gallery-empty"><p>❌ ${e.message}</p></div>`;
+            }
+        }
+
+        function renderGallery(data) {
+            const container = document.getElementById('galleryContent');
+            const pagination = document.getElementById('galleryPagination');
+
+            if (!data.items.length) {
+                container.innerHTML = '<div class="gallery-empty"><div style="font-size:2em;">🎬</div><p>Aucune vidéo générée pour l'instant</p></div>';
+                pagination.style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = `<div class="gallery-grid">${data.items.map(renderGalleryCard).join('')}</div>`;
+
+            // Pagination
+            pagination.style.display = data.pages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${data.page} / ${data.pages}`;
+            document.getElementById('prevPage').disabled = data.page <= 1;
+            document.getElementById('nextPage').disabled = data.page >= data.pages;
+        }
+
+        function renderGalleryCard(gen) {
+            const date = new Date(gen.created_at).toLocaleDateString('fr-FR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            const isExpired = !gen.video_url;
+            return `
+            <div class="gallery-card">
+                ${gen.video_url
+                    ? `<video class="gallery-video" src="${gen.video_url}" muted loop
+                        onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0"></video>`
+                    : `<div class="gallery-video" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:0.8em;">Expirée</div>`
+                }
+                <div class="gallery-card-body">
+                    <div class="gallery-date">📅 ${date}</div>
+                    ${gen.video_url
+                        ? `<button class="gallery-dl-btn" onclick="downloadGalleryVideo('${gen.video_url}', '${gen.job_id}')">📥 Télécharger</button>`
+                        : `<button class="gallery-dl-btn" disabled style="opacity:0.3;">Vidéo expirée</button>`
+                    }
+                </div>
+            </div>`;
+        }
+
+        function galleryPage(dir) {
+            const newPage = galleryCurrentPage + dir;
+            if (newPage >= 1 && newPage <= galleryTotalPages) loadGallery(newPage);
+        }
+
+        async function downloadGalleryVideo(url, jobId) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `easyai_${jobId}.mp4`;
+                a.click();
+            } catch(e) {
+                window.open(url, '_blank');
+            }
+        }
+
+        // ── SAUVEGARDE GENERATION ──────────────────
+        async function saveGeneration(jobId, videoUrl, userPrompt) {
+            try {
+                await fetch(`${BACKEND_URL}/generations/save?job_id=${encodeURIComponent(jobId)}&video_url=${encodeURIComponent(videoUrl)}&user_prompt=${encodeURIComponent(userPrompt)}`, {
+                    method: 'POST',
+                    headers: { 'X-Api-Token': getToken() }
+                });
+            } catch(e) {
+                console.log('Could not save generation:', e);
+            }
         }
 
         // Recharger les LoRAs si le token change

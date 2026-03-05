@@ -532,10 +532,16 @@
           <div class="field">
             <label>Quota journalier (vidéos/jour)</label>
             <div class="range-wrap">
-              <input type="range" id="u-quota" min="1" max="20" step="1" value="3"
+              <input type="range" id="u-quota" min="1" max="999" step="1" value="3"
                 oninput="document.getElementById('u-quota-val').textContent = this.value" />
               <span class="range-val" id="u-quota-val">3</span>
             </div>
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; text-transform:none; letter-spacing:0;">
+              <input type="checkbox" id="u-is-admin" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+              <span style="font-size:12px; color:var(--text);">Compte admin <span style="color:var(--muted); font-size:11px;">(accès LoRAs + galerie complète)</span></span>
+            </label>
           </div>
           <div style="margin-top:24px;">
             <button class="btn btn-success" onclick="submitUser()" id="submitUserBtn" style="width:100%;justify-content:center;">
@@ -808,12 +814,13 @@
       const res = await fetch(`${API_URL}/admin/create-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': ADMIN_SECRET },
-        body: JSON.stringify({ email, quota_daily })
+        body: JSON.stringify({ email, quota_daily, is_admin: document.getElementById('u-is-admin').checked ? 1 : 0 })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Erreur');
       toast(`✓ Utilisateur "${email}" créé !`, 'success');
       document.getElementById('u-email').value = '';
+      document.getElementById('u-is-admin').checked = false;
       // Affiche le token
       document.getElementById('newTokenVal').textContent = data.token;
       document.getElementById('newTokenBox').style.display = 'block';
@@ -849,6 +856,9 @@
     const activeTag = user.active
       ? `<span class="tag tag-active">Actif</span>`
       : `<span class="tag tag-inactive">Inactif</span>`;
+    const adminTag = user.is_admin
+      ? `<span class="tag" style="background:rgba(124,106,255,0.15);color:var(--accent);border:1px solid rgba(124,106,255,0.3);">⚡ Admin</span>`
+      : '';
 
     const used = user.videos_today || 0;
     const quota = user.quota_daily || 1;
@@ -872,7 +882,7 @@
           </div>
         </div>
 
-        <div style="display:flex; gap:8px; margin-bottom:10px;">${activeTag}</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">${activeTag}${adminTag}</div>
 
         <div class="user-stats">
           <div class="stat">

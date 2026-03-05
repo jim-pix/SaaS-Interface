@@ -849,15 +849,17 @@
         }
 
         // Preview image
-        imageInput.addEventListener('change', function(e) {
+        document.getElementById('imageInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    imagePreview.style.display = 'block';
-                    fileLabel.textContent = `✅ ${file.name}`;
-                    fileLabel.classList.add('has-file');
+                reader.onload = function(evt) {
+                    const preview = document.getElementById('imagePreview');
+                    const label = document.getElementById('fileLabel');
+                    preview.src = evt.target.result;
+                    preview.style.display = 'block';
+                    label.textContent = '✅ ' + file.name;
+                    label.classList.add('has-file');
                 };
                 reader.readAsDataURL(file);
             }

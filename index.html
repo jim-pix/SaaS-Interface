@@ -1350,7 +1350,7 @@
             const pagination = document.getElementById('galleryPagination');
 
             if (!data.items.length) {
-                container.innerHTML = '<div class="gallery-empty"><div style="font-size:2em;">🎬</div><p>Aucune vidéo générée pour l'instant</p></div>';
+                container.innerHTML = `<div class="gallery-empty"><div style="font-size:2em;">🎬</div><p>Aucune vidéo générée pour l'instant</p></div>`;
                 pagination.style.display = 'none';
                 return;
             }

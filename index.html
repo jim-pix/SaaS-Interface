@@ -573,22 +573,65 @@
             <!-- Type de workflow -->
             <div class="form-group">
                 <label for="workflowType">Type d'animation</label>
-                <select id="workflowType" required>
+                <select id="workflowType" required onchange="onWorkflowChange()">
                     <option value="1">Simple animation de l'image</option>
                     <option value="2">Animation + remplacement de fond</option>
+                    <option value="3">Animation début → fin (First/Last Frame)</option>
                 </select>
             </div>
 
-            <!-- Upload image -->
+            <!-- Upload images (standard ou FLF) -->
             <div class="form-group">
-                <label>Image de référence</label>
-                <div class="file-upload">
-                    <input type="file" id="imageInput" accept="image/*" required>
-                    <label for="imageInput" class="file-upload-label" id="fileLabel">
-                        📁 Cliquez pour sélectionner une image
-                    </label>
+                <!-- Mode standard : image de référence unique -->
+                <div id="standardImageSection">
+                    <label>Image de référence</label>
+                    <div class="file-upload">
+                        <input type="file" id="imageInput" accept="image/*">
+                        <label for="imageInput" class="file-upload-label" id="fileLabel">
+                            📁 Cliquez pour sélectionner une image
+                        </label>
+                    </div>
+                    <img id="imagePreview" alt="Preview" style="max-width:100%; max-height:300px; margin-top:15px; border-radius:8px; display:none;">
                 </div>
-                <img id="imagePreview" alt="Preview">
+
+                <!-- Mode FLF : image de fin obligatoire + image de début optionnelle -->
+                <div id="flfSection" style="display:none;">
+                    <div style="padding: 14px; background: #111122; border-radius: 10px; border: 1px solid #2a2a4a; display:flex; flex-direction:column; gap:16px;">
+
+                        <!-- First frame : coché par défaut, décochable -->
+                        <div>
+                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.95em; color:#aaa; font-weight:500; margin-bottom:10px;">
+                                <input type="checkbox" id="useFirstFrame" checked style="width:auto; height:auto; cursor:pointer;" onchange="onFirstFrameToggle()">
+                                <span>🎬 Image de début</span>
+                            </label>
+                            <div id="firstFrameUpload">
+                                <div class="file-upload">
+                                    <input type="file" id="firstFrameInput" accept="image/*">
+                                    <label for="firstFrameInput" class="file-upload-label" id="firstFrameFileLabel">
+                                        📁 Cliquez pour sélectionner l'image de début
+                                    </label>
+                                </div>
+                                <img id="firstFramePreview" alt="First Frame" style="max-width:100%; max-height:200px; margin-top:10px; border-radius:8px; display:none;">
+                            </div>
+                        </div>
+
+                        <!-- Last frame : toujours présente, obligatoire -->
+                        <div style="border-top:1px solid #2a2a4a; padding-top:14px;">
+                            <label style="font-size:0.95em; color:#aaa; font-weight:500; display:block; margin-bottom:10px;">
+                                🏁 Image de fin <span style="font-size:0.8em; color:#cc0000;">*</span>
+                            </label>
+                            <div class="file-upload">
+                                <input type="file" id="lastFrameInput" accept="image/*">
+                                <label for="lastFrameInput" class="file-upload-label" id="lastFrameFileLabel">
+                                    🏁 Cliquez pour sélectionner l'image de fin
+                                </label>
+                            </div>
+                            <img id="lastFramePreview" alt="Last Frame" style="max-width:100%; max-height:200px; margin-top:10px; border-radius:8px; display:none;">
+                        </div>
+
+                    </div>
+                    <small style="color:#555; display:block; margin-top:8px; font-size:0.8em;">💡 Décochez "Image de début" pour générer uniquement depuis une image de fin.</small>
+                </div>
             </div>
 
             <!-- Format vidéo -->
@@ -865,6 +908,74 @@
             }
         });
 
+        // Preview first frame (mode FLF)
+        document.getElementById('firstFrameInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const preview = document.getElementById('firstFramePreview');
+                    const label = document.getElementById('firstFrameFileLabel');
+                    preview.src = evt.target.result;
+                    preview.style.display = 'block';
+                    label.textContent = '✅ ' + file.name;
+                    label.classList.add('has-file');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Preview last frame (mode FLF)
+        document.getElementById('lastFrameInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const preview = document.getElementById('lastFramePreview');
+                    const label = document.getElementById('lastFrameFileLabel');
+                    preview.src = evt.target.result;
+                    preview.style.display = 'block';
+                    label.textContent = '✅ ' + file.name;
+                    label.classList.add('has-file');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Gestion changement de workflow
+        function onWorkflowChange() {
+            const wf = parseInt(document.getElementById('workflowType').value);
+            const isFLF = wf === 3;
+            document.getElementById('standardImageSection').style.display = isFLF ? 'none' : 'block';
+            document.getElementById('flfSection').style.display = isFLF ? 'block' : 'none';
+            document.getElementById('imageInput').required = !isFLF;
+            // Reset au retour mode standard
+            if (!isFLF) {
+                document.getElementById('useFirstFrame').checked = true;
+                document.getElementById('firstFrameUpload').style.display = 'block';
+                document.getElementById('firstFrameInput').value = '';
+                document.getElementById('firstFramePreview').style.display = 'none';
+                document.getElementById('firstFrameFileLabel').textContent = '📁 Cliquez pour sélectionner l\'image de début';
+                document.getElementById('firstFrameFileLabel').classList.remove('has-file');
+                document.getElementById('lastFrameInput').value = '';
+                document.getElementById('lastFramePreview').style.display = 'none';
+                document.getElementById('lastFrameFileLabel').textContent = '🏁 Cliquez pour sélectionner l\'image de fin';
+                document.getElementById('lastFrameFileLabel').classList.remove('has-file');
+            }
+        }
+
+        // Gestion checkbox first frame (coché par défaut, décochable)
+        function onFirstFrameToggle() {
+            const checked = document.getElementById('useFirstFrame').checked;
+            document.getElementById('firstFrameUpload').style.display = checked ? 'block' : 'none';
+            if (!checked) {
+                document.getElementById('firstFrameInput').value = '';
+                document.getElementById('firstFramePreview').style.display = 'none';
+                document.getElementById('firstFrameFileLabel').textContent = '📁 Cliquez pour sélectionner l\'image de début';
+                document.getElementById('firstFrameFileLabel').classList.remove('has-file');
+            }
+        }
+
         // Calcul durée estimée
         function updateDuration() {
             const frames = parseInt(videoLength.value);
@@ -933,14 +1044,55 @@
             const length = parseInt(videoLength.value);
             const prompt = document.getElementById('prompt').value;
 
-            // Get image as base64
-            const file = imageInput.files[0];
-            if (!file) {
-                addLog('error', 'Veuillez sélectionner une image');
-                return;
-            }
+            const workflowTypeSel = parseInt(document.getElementById('workflowType').value);
+            const isFLF = workflowTypeSel === 3;
 
-            const imageBase64 = await fileToBase64(file);
+            // Récupération images selon le mode
+            let imageBase64 = null;
+            let lastFrameBase64 = null;
+            let useFirstFrame = false;
+
+            if (isFLF) {
+                // Image de fin : obligatoire
+                const lastFile = document.getElementById('lastFrameInput').files[0];
+                if (!lastFile) {
+                    addLog('error', '⚠️ L\'image de fin est obligatoire en mode First/Last Frame');
+                    progressSection.classList.remove('active');
+                    generateBtn.disabled = false;
+                    cancelBtn.style.display = 'none';
+                    return;
+                }
+                const rawLast = await fileToBase64(lastFile);
+                lastFrameBase64 = rawLast.split(',')[1];
+
+                // Image de début : optionnelle (cochée par défaut)
+                useFirstFrame = document.getElementById('useFirstFrame').checked;
+                if (useFirstFrame) {
+                    const firstFile = document.getElementById('firstFrameInput').files[0];
+                    if (firstFile) {
+                        const rawFirst = await fileToBase64(firstFile);
+                        imageBase64 = rawFirst.split(',')[1];
+                    } else {
+                        addLog('error', '⚠️ Veuillez sélectionner une image de début ou décocher la case');
+                        progressSection.classList.remove('active');
+                        generateBtn.disabled = false;
+                        cancelBtn.style.display = 'none';
+                        return;
+                    }
+                }
+            } else {
+                // Mode standard : image unique obligatoire
+                const file = imageInput.files[0];
+                if (!file) {
+                    addLog('error', 'Veuillez sélectionner une image');
+                    progressSection.classList.remove('active');
+                    generateBtn.disabled = false;
+                    cancelBtn.style.display = 'none';
+                    return;
+                }
+                const raw = await fileToBase64(file);
+                imageBase64 = raw.split(',')[1];
+            }
 
             // Start timer
             startTime = Date.now();
@@ -963,14 +1115,16 @@
                         'X-Api-Token': getToken()
                     },
                     body: JSON.stringify({
-                        workflow_name: "animation_image",
+                        workflow_name: workflowTypeSel === 3 ? "animation_flf" : "animation_image",
                         workflow_type: workflowType,
+                        use_first_frame: isFLF ? useFirstFrame : true,
                         video_format: format === 0 ? "16:9" : "9:16",
                         rife_multiplier: parseInt(document.querySelector('input[name="rifeMultiplier"]:checked').value),
                         size_scale: Math.round(scale * 100),
                         video_length: length,
                         user_prompt: prompt,
-                        image_base64: imageBase64.split(',')[1],
+                        image_base64: imageBase64,
+                        last_frame_base64: lastFrameBase64,
                         frame_rate: parseInt(frameRate.value),
                         motion_amplitude: parseFloat(motionAmplitude.value),
                         color_protect: colorProtect.checked,

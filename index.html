@@ -580,6 +580,13 @@
                 </select>
             </div>
 
+            <!-- Info box FLF (visible uniquement en mode 3) -->
+            <div id="flfInfoBox" style="display:none; margin-bottom:20px; padding:12px 16px; background:linear-gradient(135deg,#0d1117,#111122); border-radius:8px; border-left:4px solid #7c6aff; font-size:0.88em; color:#aaa; line-height:1.6;">
+                <strong style="color:#7c6aff;">🎬 Comment fonctionne ce mode ?</strong><br>
+                L'IA génère une vidéo qui <em>arrive</em> à votre <strong style="color:#ddd;">image de fin</strong> (obligatoire), en se basant sur ce que vous décrivez dans le prompt.<br>
+                Avec l'<strong style="color:#ddd;">image de début</strong> cochée, l'IA crée la transition entre les deux images selon votre description. Décochez-la pour laisser l'IA générer librement le début et n'utiliser que l'image de fin comme point d'arrivée.
+            </div>
+
             <!-- Upload images (standard ou FLF) -->
             <div class="form-group">
                 <!-- Mode standard : image de référence unique -->
@@ -948,6 +955,7 @@
             const isFLF = wf === 3;
             document.getElementById('standardImageSection').style.display = isFLF ? 'none' : 'block';
             document.getElementById('flfSection').style.display = isFLF ? 'block' : 'none';
+            document.getElementById('flfInfoBox').style.display = isFLF ? 'block' : 'none';
             document.getElementById('imageInput').required = !isFLF;
             // Reset au retour mode standard
             if (!isFLF) {
@@ -1115,7 +1123,7 @@
                         'X-Api-Token': getToken()
                     },
                     body: JSON.stringify({
-                        workflow_name: workflowTypeSel === 3 ? "animation_flf" : "animation_image",
+                        workflow_name: workflowTypeSel === 3 ? (useFirstFrame ? "animation_flf" : "animation_lfo") : "animation_image",
                         workflow_type: workflowType,
                         use_first_frame: isFLF ? useFirstFrame : true,
                         video_format: format === 0 ? "16:9" : "9:16",

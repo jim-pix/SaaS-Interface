@@ -1008,14 +1008,35 @@
             const length = parseInt(videoLength.value);
             const prompt = document.getElementById('prompt').value;
 
-            // Get image as base64
-            const file = imageInput.files[0];
-            if (!file) {
-                addLog('error', 'Veuillez sélectionner une image');
-                return;
-            }
+            // Validation selon workflow
+            let imageBase64 = null;
 
-            const imageBase64 = await fileToBase64(file);
+            if (currentWorkflow === 2) {
+                // Workflow SVi : last frame obligatoire
+                const lastFrameCheck = document.getElementById('lastFrameInput').files[0];
+                if (!lastFrameCheck) {
+                    addLog('error', "❌ Veuillez sélectionner l'image d'arrivée (last frame)");
+                    progressSection.classList.remove('active');
+                    return;
+                }
+                // First frame optionnelle mais si cochée, vérifier qu'elle est uploadée
+                const useFF = document.getElementById('useFirstFrame').checked;
+                if (useFF && !document.getElementById('firstFrameInput').files[0]) {
+                    addLog('error', "❌ Veuillez sélectionner l'image de départ (first frame) ou décocher l'option");
+                    progressSection.classList.remove('active');
+                    return;
+                }
+            } else {
+                // Workflow normal : image principale obligatoire
+                const file = imageInput.files[0];
+                if (!file) {
+                    addLog('error', '❌ Veuillez sélectionner une image');
+                    progressSection.classList.remove('active');
+                    return;
+                }
+                const imgData = await fileToBase64(file);
+                imageBase64 = imgData.split(',')[1];
+            }
 
             // Start timer
             startTime = Date.now();
@@ -1063,7 +1084,7 @@
                         size_scale: Math.round(scale * 100),
                         video_length: length,
                         user_prompt: prompt,
-                        image_base64: imageBase64.split(',')[1],
+                        image_base64: imageBase64,
                         frame_rate: parseInt(frameRate.value),
                         motion_amplitude: parseFloat(motionAmplitude.value),
                         color_protect: colorProtect.checked,

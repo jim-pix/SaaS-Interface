@@ -948,10 +948,33 @@ function showConfirmation() {
         ${finalPrompt}
       </div>
     </div>
-    <br>Lance la génération quand tu es prêt·e 👇`;
+    <br>Lance la génération quand tu es prêt·e 👇
+    <div style="margin-top:10px;">
+      <button onclick="restartFromDescription()" style="background:transparent;border:1px dashed #333;border-radius:10px;padding:8px 14px;color:var(--muted);font-size:0.8em;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='#666';this.style.color='#aaa'" onmouseout="this.style.borderColor='#333';this.style.color='var(--muted)'">
+        ✎ Modifier ma description
+      </button>
+    </div>`;
 
   addAIMessage(html);
   showGenerateBtn();
+}
+
+function restartFromDescription() {
+  // Repart depuis la description — garde l'image, remet à zéro le reste
+  workflow = null;
+  clarifQuestions = [];
+  clarifAnswers = [];
+  currentQIndex = 0;
+  finalPrompt = '';
+  imageBase64_2 = null;
+  phase = 'describe';
+
+  hideAll();
+  setBadge('En attente');
+  showTyping(400, () => {
+    addAIMessage("Pas de souci ! Décris à nouveau ce que tu veux créer — je repars de zéro. 🎨");
+    showInputRow('Je veux créer...');
+  });
 }
 
 // ══════════════════════════════════════════

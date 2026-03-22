@@ -1289,29 +1289,23 @@
             if (!currentVideoUrl) return;
 
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const downloadUrl = currentJobId
-                ? `${BACKEND_URL}/download/${currentJobId}?token=${encodeURIComponent(getToken())}`
-                : currentVideoUrl;
-
-            if (isIOS && navigator.share) {
-                try {
-                    await navigator.share({ title: 'Ma vidéo EasyAI', url: downloadUrl });
-                    addLog('success', '✅ Utilise "Enregistrer la vidéo" dans la sheet de partage');
-                    return;
-                } catch(e) {
-                    if (e.name === 'AbortError') return;
-                }
-            }
 
             if (isIOS) {
-                addLog('info', '📱 Ouverture dans Safari — bouton ↑ puis "Enregistrer la vidéo"');
+                // Sur iOS : télécharge dans Fichiers + instructions claires
+                const downloadUrl = currentJobId
+                    ? `${BACKEND_URL}/download/${currentJobId}?token=${encodeURIComponent(getToken())}`
+                    : currentVideoUrl;
                 window.location.href = downloadUrl;
+                addLog('info', '📱 iOS : La vidéo se télécharge dans l\'app Fichiers. Ouvre Fichiers → appui long sur la vidéo → Partager → "Enregistrer la vidéo" pour la mettre dans ta pellicule.');
                 return;
             }
 
             // Android + Desktop
             try {
                 addLog('info', '📥 Téléchargement en cours...');
+                const downloadUrl = currentJobId
+                    ? `${BACKEND_URL}/download/${currentJobId}?token=${encodeURIComponent(getToken())}`
+                    : currentVideoUrl;
                 const response = await fetch(downloadUrl);
                 const blob = await response.blob();
                 const blobUrl = URL.createObjectURL(blob);

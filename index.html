@@ -575,7 +575,6 @@
                 <label for="workflowType">Type d'animation</label>
                 <select id="workflowType" required onchange="onWorkflowChange()">
                     <option value="1">Simple animation de l'image</option>
-                    <option value="2">Animation + remplacement de fond</option>
                     <option value="3">Animation début → fin (First/Last Frame)</option>
                 </select>
             </div>
@@ -1190,6 +1189,8 @@
                     stopTimer();
                     
                     addLog('success', '✅ Génération terminée !');
+                    localStorage.removeItem('active_job_id');
+                    localStorage.removeItem('job_start_time');
                     updateProgress(100, 'Terminé !');
 
                     const output = result.output;
@@ -1228,6 +1229,8 @@
                     stopProgressSimulation();
                     stopTimer();
                     
+                    localStorage.removeItem('active_job_id');
+                    localStorage.removeItem('job_start_time');
                     addLog('error', `❌ Échec: ${result.error || 'Erreur inconnue'}`);
                     updateProgress(0, 'Échec');
                     generateBtn.disabled = false;
@@ -1254,6 +1257,8 @@
                     clearInterval(pollInterval);
                     stopProgressSimulation();
                     stopTimer();
+                    localStorage.removeItem('active_job_id');
+                    localStorage.removeItem('job_start_time');
                     addLog('warning', '⚠️ Génération annulée');
                     updateProgress(0, 'Annulé');
                     generateBtn.disabled = false;
@@ -1351,6 +1356,55 @@
             });
         }
 
+
+        // ── Reprise de job en cours après retour sur l'app ──
+
+        function resumeJobIfNeeded() {
+            const savedJobId = localStorage.getItem('active_job_id');
+            if (!savedJobId || currentJobId) return;
+
+            const startTime = parseInt(localStorage.getItem('job_start_time') || '0');
+            const elapsed = Date.now() - startTime;
+
+            // Si le job a plus de 30 minutes, on abandonne
+            if (elapsed > 30 * 60 * 1000) {
+                localStorage.removeItem('active_job_id');
+                localStorage.removeItem('job_start_time');
+                return;
+            }
+
+            // Reprendre le suivi
+            currentJobId = savedJobId;
+            progressSection.classList.add('active');
+            generateBtn.disabled = true;
+            cancelBtn.style.display = 'block';
+            startTime_var = Date.now() - elapsed;
+            startTimer();
+            addLog('info', `🔄 Reprise du suivi du job en cours...`);
+            updateProgress(15, 'Reprise en cours...');
+            pollInterval = setInterval(() => checkStatus(currentJobId), 2000);
+        }
+
+        // Relancer le polling quand l'utilisateur revient sur l'onglet
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                if (currentJobId && !pollInterval) {
+                    // Polling mort, on le relance
+                    addLog('info', '🔄 Reprise du suivi...');
+                    pollInterval = setInterval(() => checkStatus(currentJobId), 2000);
+                } else if (!currentJobId) {
+                    // Pas de job en mémoire, on vérifie localStorage
+                    resumeJobIfNeeded();
+                }
+            } else {
+                // App en arrière-plan : on arrête le polling pour économiser
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+            }
+        });
+
         // Initial log
         addLog('info', '🚀 Interface prête. Configurez vos paramètres et lancez la génération.');
 
@@ -1362,6 +1416,9 @@
 
         // Charger infos user (admin check)
         loadUserInfo();
+
+        // Vérifier si un job était en cours
+        resumeJobIfNeeded();
 
         // ── ADMIN : LoRAs ──────────────────────────────
         let availableLoras = [];

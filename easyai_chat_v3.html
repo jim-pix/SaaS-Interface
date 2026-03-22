@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyAI — v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #222;
+    --red: #cc0000;
+    --red-dim: #1a0000;
+    --text: #e8e8e8;
+    --muted: #666;
+    --bubble-ai: #181818;
+    --bubble-user: #1a0000;
+    --accent: #ff2020;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ══ ÉCRAN D'ACCUEIL ══ */
+  #welcomeScreen {
+    width: 100%;
+    max-width: 680px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    padding: 40px 20px;
+    position: relative;
+  }
+
+  #welcomeScreen::before {
+    content: '';
+    position: absolute;
+    top: -100px; left: 50%;
+    transform: translateX(-50%);
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(204,0,0,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 3em;
+    letter-spacing: -2px;
+    color: #fff;
+    text-align: center;
+    animation: fadeUp 0.7s ease both;
+  }
+  .logo span { color: var(--red); }
+
+  .logo-tagline {
+    font-size: 0.95em;
+    color: var(--muted);
+    margin-top: 8px;
+    font-weight: 300;
+    text-align: center;
+  }
+
+  /* Zone de drop grande et accueillante */
+  .welcome-upload {
+    width: 100%;
+    max-width: 500px;
+    aspect-ratio: 4/3;
+    background: #0e0e0e;
+    border: 1.5px dashed #2a2a2a;
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.35s ease;
+    overflow: hidden;
+    animation: fadeUp 0.7s 0.15s ease both;
+  }
+
+  .welcome-upload input {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .welcome-upload-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; pointer-events: none;
+    transition: all 0.3s;
+  }
+
+  .upload-icon {
+    width: 56px; height: 56px;
+    border: 1.5px solid #2a2a2a;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6em;
+    background: #141414;
+    transition: all 0.3s;
+  }
+
+  .upload-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #aaa;
+  }
+
+  .upload-sub {
+    font-size: 0.8em;
+    color: var(--muted);
+  }
+
+  .welcome-upload:hover {
+    border-color: var(--red);
+    background: #110000;
+  }
+  .welcome-upload:hover .upload-icon {
+    border-color: rgba(204,0,0,0.4);
+    background: var(--red-dim);
+  }
+  .welcome-upload:hover .upload-title { color: #fff; }
+
+  .welcome-upload img#welcomePreview {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  /* ══ CHAT PAGE ══ */
+  #chatPage {
+    display: none;
+    width: 100%;
+    max-width: 680px;
+    height: 100vh;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .back-btn {
+    width: 30px; height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; font-size: 1em;
+  }
+  .back-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .header-thumb {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #2a2a2a;
+    display: none;
+  }
+
+  .header-info { flex: 1; }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.95em; color: #fff;
+  }
+  .header-sub { font-size: 0.72em; color: var(--muted); margin-top: 1px; }
+
+  .step-badge {
+    font-size: 0.68em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 3px 10px;
+    transition: all 0.4s;
+    white-space: nowrap;
+  }
+  .step-badge.ping { color: var(--red); border-color: rgba(204,0,0,0.4); background: var(--red-dim); }
+
+  /* Messages */
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar { width: 3px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+  .bubble-wrap {
+    display: flex; gap: 9px; align-items: flex-end;
+    animation: fadeUp 0.28s ease both;
+  }
+  .bubble-wrap.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7em; flex-shrink: 0;
+    font-family: 'Syne', sans-serif; font-weight: 700;
+  }
+  .avatar.ai { background: var(--red); color: #fff; letter-spacing: -0.5px; }
+  .avatar.usr { background: #222; color: #777; font-size: 0.85em; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 11px 15px;
+    border-radius: 16px;
+    line-height: 1.55;
+    font-size: 0.91em;
+  }
+  .bubble.ai {
+    background: var(--bubble-ai);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .bubble.user {
+    background: var(--bubble-user);
+    border: 1px solid rgba(204,0,0,0.25);
+    border-bottom-right-radius: 4px;
+    color: #ffaaaa;
+  }
+
+  .image-bubble {
+    max-width: 70%;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(204,0,0,0.25);
+  }
+  .image-bubble img { width: 100%; max-height: 180px; object-fit: cover; display: block; }
+
+  /* Typing */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
+  .typing span {
+    width: 5px; height: 5px; background: #3a3a3a;
+    border-radius: 50%; animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); background: var(--red); }
+  }
+
+  /* Suggestions cards */
+  .suggestions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .suggestion-card {
+    background: #151515;
+    border: 1px solid #252525;
+    border-radius: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+  .suggestion-card:hover {
+    border-color: var(--red);
+    background: var(--red-dim);
+  }
+  .suggestion-card:hover .sug-icon-wrap { border-color: rgba(204,0,0,0.5); }
+  .suggestion-card:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+
+  .sug-icon-wrap {
+    width: 34px; height: 34px;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1em; flex-shrink: 0;
+    background: #111;
+    transition: border-color 0.2s;
+  }
+
+  .sug-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.84em; color: #ccc;
+    line-height: 1.2;
+  }
+  .sug-desc {
+    font-size: 0.75em; color: var(--muted);
+    margin-top: 2px; line-height: 1.3;
+  }
+
+  /* Option libre dans les suggestions */
+  .free-option {
+    background: transparent;
+    border: 1px dashed #2a2a2a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.82em;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .free-option:hover { border-color: #444; color: #aaa; }
+
+  /* Choix de clarification */
+  .choices-wrap { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+
+  .choice-btn {
+    background: #151515;
+    border: 1px solid #252525;
+    border-radius: 10px;
+    padding: 9px 13px;
+    color: #bbb;
+    font-size: 0.86em;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .choice-btn:hover { border-color: var(--red); background: var(--red-dim); color: #fff; }
+  .choice-btn:hover .cnum { background: var(--red); color: #fff; }
+  .choice-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+  .choice-btn.picked { border-color: rgba(204,0,0,0.4); background: var(--red-dim); color: #ffaaaa; opacity: 0.6; }
+
+  .cnum {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #252525; display: flex; align-items: center;
+    justify-content: center; font-size: 0.72em;
+    font-weight: 700; flex-shrink: 0; color: #777;
+    transition: all 0.2s;
+  }
+
+  .q-label {
+    font-size: 0.68em; color: var(--muted);
+    font-family: 'Syne', sans-serif; letter-spacing: 1px;
+    text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.6;
+  }
+
+  /* Boîte confirmation */
+  .confirm-box {
+    background: #0c180c;
+    border: 1px solid #1a341a;
+    border-radius: 12px;
+    padding: 13px 15px;
+    margin-top: 10px;
+    font-size: 0.84em;
+    color: #99cc99;
+    line-height: 1.7;
+  }
+  .confirm-box strong { color: #55ee55; display: block; margin-bottom: 6px; font-family: 'Syne', sans-serif; }
+  .confirm-row { display: flex; gap: 8px; align-items: baseline; }
+  .confirm-label { color: var(--muted); min-width: 90px; font-size: 0.9em; }
+
+  .prompt-box {
+    background: #0b0b1a;
+    border: 1px solid #1a1a38;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: 0.83em;
+    color: #9999cc;
+    line-height: 1.6;
+    font-style: italic;
+  }
+  .prompt-box-label {
+    font-family: 'Syne', sans-serif; font-size: 0.7em;
+    font-style: normal; color: #444;
+    letter-spacing: 1px; text-transform: uppercase;
+    display: block; margin-bottom: 6px;
+  }
+
+  /* Loader API -->
+  .api-loader {
+    display: inline-flex; align-items: center;
+    gap: 8px; font-size: 0.8em; color: var(--muted);
+    font-style: italic; padding: 4px 0;
+  }
+  .api-dot { width: 5px; height: 5px; background: var(--red); border-radius: 50%; animation: pulse 0.9s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* Input area */
+  .chat-input-area {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    flex-shrink: 0;
+  }
+
+  .input-row { display: none; gap: 9px; align-items: flex-end; }
+  .input-row.visible { display: flex; }
+
+  .text-input {
+    flex: 1;
+    background: #111;
+    border: 1.5px solid #252525;
+    border-radius: 12px;
+    padding: 11px 15px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.91em;
+    resize: none;
+    min-height: 44px;
+    max-height: 110px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.4;
+  }
+  .text-input:focus { border-color: #3a3a3a; }
+  .text-input::placeholder { color: #383838; }
+
+  .send-btn {
+    width: 44px; height: 44px;
+    background: var(--red);
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 1.05em;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .send-btn:hover { background: #ff2020; transform: scale(1.05); }
+  .send-btn:disabled { background: #252525; cursor: not-allowed; transform: none; }
+
+  .generate-zone { display: none; }
+  .generate-zone.visible { display: block; }
+
+  .gen-btn {
+    width: 100%; padding: 14px;
+    background: var(--red); border: none;
+    border-radius: 12px; color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.97em;
+    cursor: pointer; transition: all 0.3s;
+    letter-spacing: 0.5px;
+  }
+  .gen-btn:hover { background: #ff2020; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(204,0,0,0.28); }
+
+  .progress-wrap { display: none; flex-direction: column; gap: 7px; }
+  .progress-wrap.visible { display: flex; }
+  .progress-label { font-size: 0.78em; color: var(--muted); display: flex; justify-content: space-between; }
+  .progress-bar-bg { height: 3px; background: #1e1e1e; border-radius: 2px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--red); border-radius: 2px; width: 0%; transition: width 0.5s ease; }
+
+  /* Upload zone dans le chat (2e image SVI) */
+  .upload-zone-chat {
+    display: none;
+    position: relative;
+    background: #0e0e0e;
+    border: 1.5px dashed #2a2a2a;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    overflow: hidden;
+    height: 100px;
+  }
+  .upload-zone-chat.visible { display: block; }
+  .upload-zone-chat input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-zone-chat-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; color: #555; pointer-events: none; font-size: 0.85em;
+  }
+  .upload-zone-chat:hover { border-color: var(--red); background: #110000; }
+  .upload-zone-chat:hover .upload-zone-chat-label { color: #aa4444; }
+  .upload-zone-chat img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ ÉCRAN D'ACCUEIL ══ -->
+<div id="welcomeScreen">
+  <div>
+    <div class="logo">Easy<span>AI</span></div>
+    <div class="logo-tagline">Charge une image. On s'occupe du reste.</div>
+  </div>
+
+  <div class="welcome-upload" id="welcomeUpload">
+    <input type="file" accept="image/*" id="welcomeFileInput" onchange="handleWelcomeUpload(event)">
+    <div class="welcome-upload-label" id="welcomeLabel">
+      <div class="upload-icon">📁</div>
+      <div class="upload-title">Dépose ton image ici</div>
+      <div class="upload-sub">JPG, PNG, WEBP — la créativité commence ici</div>
+    </div>
+    <img id="welcomePreview" alt="">
+  </div>
+</div>
+
+<!-- ══ CHAT PAGE ══ -->
+<div id="chatPage">
+  <div class="chat-header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <img class="header-thumb" id="headerThumb" alt="">
+    <div class="header-info">
+      <div class="header-title">EasyAI</div>
+      <div class="header-sub">Directeur créatif IA</div>
+    </div>
+    <div class="step-badge" id="stepBadge">Analyse...</div>
+  </div>
+
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <div class="chat-input-area">
+    <!-- 2e image pour mode SVI -->
+    <div class="upload-zone-chat" id="uploadZone2">
+      <input type="file" accept="image/*" id="fileInput2" onchange="handleImage2(event)">
+      <div class="upload-zone-chat-label">📁 &nbsp; Dépose l'image de fin (last frame)</div>
+      <img id="preview2" alt="">
+    </div>
+
+    <!-- Champ texte -->
+    <div class="input-row" id="inputRow">
+      <textarea class="text-input" id="textInput"
+        placeholder="Décris ta vision ou réponds ici..."
+        rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+    </div>
+
+    <!-- Bouton générer -->
+    <div class="generate-zone" id="generateZone">
+      <button class="gen-btn" onclick="startGeneration()">🚀 Générer la vidéo</button>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressLabel">Génération en cours...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════
+const BACKEND_URL = 'https://wan22-backend.fly.dev'; // ← remplace par ton URL Fly.io ex: https://wan22-backend.fly.dev
+const SIMULATE_API = false; // ← false = vrai backend Gemini
+
+// ══════════════════════════════════════════
+//  ÉTAT
+// ══════════════════════════════════════════
+let imageBase64    = null; // image principale
+let imageBase64_2  = null; // 2e image (SVI)
+let userVision     = '';   // description validée
+let workflow       = null; // 'anim' | 'svi' | 'lastframe'
+let clarifQuestions = [];
+let clarifAnswers   = [];
+let currentQIndex   = 0;
+let finalPrompt     = '';
+let phase = 'welcome'; // welcome | suggest | describe | clarify | upload2 | confirm | generate
+
+// ══════════════════════════════════════════
+//  UPLOAD ACCUEIL
+// ══════════════════════════════════════════
+function handleWelcomeUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64 = ev.target.result;
+
+    // Preview sur écran accueil
+    const prev = document.getElementById('welcomePreview');
+    prev.src = imageBase64;
+    prev.style.display = 'block';
+    document.getElementById('welcomeLabel').style.display = 'none';
+
+    // Transition vers le chat après 400ms
+    setTimeout(() => enterChat(), 400);
+  };
+  reader.readAsDataURL(file);
+}
+
+function enterChat() {
+  document.getElementById('welcomeScreen').style.display = 'none';
+  const cp = document.getElementById('chatPage');
+  cp.style.display = 'flex';
+  cp.style.flexDirection = 'column';
+
+  const thumb = document.getElementById('headerThumb');
+  thumb.src = imageBase64;
+  thumb.style.display = 'block';
+
+  document.getElementById('chatMessages').innerHTML = '';
+  hideAll();
+  phase = 'describe';
+
+  addUserImageBubble(imageBase64);
+
+  setBadge('En attente');
+  showTyping(700, () => {
+    addAIMessage("Belle image ! 🎨<br><br><strong>Qu'est-ce que tu veux créer ?</strong><br><span style='color:var(--muted);font-size:0.85em'>Décris librement — une animation, une transition, une idée... je m'adapte.</span>");
+    showInputRow('Je veux créer...');
+  });
+}
+
+function goBack() {
+  document.getElementById('chatPage').style.display = 'none';
+  document.getElementById('welcomeScreen').style.display = 'flex';
+  resetAll();
+}
+
+function resetAll() {
+  imageBase64 = null; imageBase64_2 = null;
+  userVision = ''; workflow = null;
+  clarifQuestions = []; clarifAnswers = [];
+  currentQIndex = 0; finalPrompt = '';
+  phase = 'welcome';
+  document.getElementById('welcomePreview').style.display = 'none';
+  document.getElementById('welcomePreview').src = '';
+  document.getElementById('welcomeLabel').style.display = 'flex';
+  document.getElementById('welcomeFileInput').value = '';
+  document.getElementById('textInput').value = '';
+  document.getElementById('preview2').style.display = 'none';
+  document.getElementById('preview2').src = '';
+}
+
+// ══════════════════════════════════════════
+//  SUGGESTIONS IA
+// ══════════════════════════════════════════
+function showSuggestions(suggestions) {
+  // Message IA avec les suggestions
+  let html = `Belle image ! Voici ce qu'on pourrait créer 🎨<br><br>`;
+  html += `Clique sur une idée, ou décris directement ce que tu veux ci-dessous.`;
+
+  const wrap = addAIMessage(html);
+  const bubble = wrap.querySelector('.bubble');
+
+  const grid = document.createElement('div');
+  grid.className = 'suggestions-grid';
+
+  suggestions.forEach(sug => {
+    const card = document.createElement('button');
+    card.className = 'suggestion-card';
+    card.innerHTML = `
+      <div class="sug-icon-wrap">${sug.icon}</div>
+      <div>
+        <div class="sug-title">${sug.title}</div>
+        <div class="sug-desc">${sug.desc}</div>
+      </div>
+    `;
+    card.onclick = () => selectSuggestion(sug, grid);
+    grid.appendChild(card);
+  });
+
+  bubble.appendChild(grid);
+}
+
+function selectSuggestion(sug, container) {
+  // Désactive toutes les suggestions
+  container.querySelectorAll('.suggestion-card, .free-option').forEach(b => {
+    b.disabled = true;
+    b.style.opacity = '0.35';
+    b.style.cursor = 'default';
+    b.style.pointerEvents = 'none';
+  });
+
+  // Bubble user avec le choix
+  addUserMessage(sug.title);
+
+  // Cache le champ texte pour l'instant
+  hideInputRow();
+
+  // Définit le workflow et avance
+  workflow = sug.workflow;
+  userVision = sug.vision;
+
+  setTimeout(() => onVisionConfirmed(), 400);
+}
+
+// ══════════════════════════════════════════
+//  ENVOI TEXTE LIBRE
+// ══════════════════════════════════════════
+function sendMessage() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  addUserMessage(text);
+  input.value = '';
+  autoResize(input);
+  hideInputRow();
+
+  if (phase === 'describe') {
+    userVision = text;
+    hideAll();
+    setBadge('Analyse...');
+    showTyping(500, async () => {
+      addAPILoader('Analyse de ta demande...');
+      const result = await callGeminiClarification(imageBase64, text, null);
+      removeAPILoader();
+      workflow = result.workflow;
+      clarifQuestions = result.questions;
+      clarifAnswers = [];
+      currentQIndex = 0;
+
+      // Si workflow SVI → demander la 2e image d'abord
+      if (workflow === 'svi') {
+        setBadge('Image de fin');
+        showTyping(500, () => {
+          addAIMessage(`Parfait ! Pour créer cette transition j'ai besoin de ton <strong>image de fin</strong> — l'état final de la scène.`);
+          showUpload2();
+        });
+        return;
+      }
+
+      // Pas de questions nécessaires → prompt direct
+      if (clarifQuestions.length === 0) {
+        onAllAnswered();
+        return;
+      }
+
+      // Questions de clarification
+      phase = 'clarify';
+      setBadge('Précisions');
+      askNextQuestion();
+    });
+  } else if (phase === 'clarify-free') {
+    clarifAnswers.push(text);
+    currentQIndex++;
+    phase = 'clarify';
+    hideAll();
+    setTimeout(() => askNextQuestion(), 300);
+  }
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// ══════════════════════════════════════════
+//  VISION CONFIRMÉE → SUITE DU FLOW
+// ══════════════════════════════════════════
+async function onVisionConfirmed() {
+  hideAll();
+
+  // Si workflow SVI → demander la 2e image
+  if (workflow === 'svi') {
+    setBadge('Image de fin');
+    showTyping(600, () => {
+      addAIMessage(`Super choix ! 🎞️<br><br>Pour créer la transition, j'ai besoin de ton <strong>image de fin</strong> — l'état final de la scène.`);
+      showUpload2();
+    });
+    return;
+  }
+
+  // Sinon → questions de clarification
+  await startClarification();
+}
+
+// ══════════════════════════════════════════
+//  2E IMAGE (SVI)
+// ══════════════════════════════════════════
+function handleImage2(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64_2 = ev.target.result;
+    const prev = document.getElementById('preview2');
+    prev.src = imageBase64_2;
+    prev.style.display = 'block';
+    document.getElementById('uploadZone2').querySelector('.upload-zone-chat-label').style.display = 'none';
+    addUserImageBubble(imageBase64_2);
+    hideAll();
+    setTimeout(() => startClarification(), 400);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════
+//  CLARIFICATION
+// ══════════════════════════════════════════
+async function startClarification() {
+  phase = 'clarify';
+  setBadge('Précisions');
+  if (clarifQuestions.length === 0) {
+    onAllAnswered();
+    return;
+  }
+  askNextQuestion();
+}
+
+function askNextQuestion() {
+  if (currentQIndex >= clarifQuestions.length) {
+    onAllAnswered();
+    return;
+  }
+
+  const q = clarifQuestions[currentQIndex];
+  showTyping(500, () => {
+    let html = '';
+    if (clarifQuestions.length > 1) {
+      html += `<span class="q-label">Question ${currentQIndex + 1} / ${clarifQuestions.length}</span>`;
+    }
+    html += `<strong>${q.question}</strong>`;
+
+    const wrap = addAIMessage(html);
+    const bubble = wrap.querySelector('.bubble');
+
+    const cw = document.createElement('div');
+    cw.className = 'choices-wrap';
+
+    q.choices.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="cnum">${i+1}</span>${c}`;
+      btn.onclick = () => pickChoice(c, btn, cw);
+      cw.appendChild(btn);
+    });
+
+    // Option libre
+    const free = document.createElement('button');
+    free.className = 'choice-btn';
+    free.innerHTML = `<span class="cnum">✎</span>Autre chose... (décris librement)`;
+    free.onclick = () => {
+      disableChoices(cw);
+      phase = 'clarify-free';
+      showInputRow('Décris ta réponse...');
+    };
+    cw.appendChild(free);
+
+    bubble.appendChild(cw);
+  });
+}
+
+function pickChoice(choice, btn, container) {
+  disableChoices(container);
+  btn.classList.add('picked');
+  addUserMessage(choice);
+  clarifAnswers.push(choice);
+  currentQIndex++;
+  setTimeout(() => askNextQuestion(), 350);
+}
+
+function disableChoices(container) {
+  container.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+  });
+}
+
+// ══════════════════════════════════════════
+//  TOUTES LES RÉPONSES → PROMPT FINAL
+// ══════════════════════════════════════════
+async function onAllAnswered() {
+  setBadge('Prompt final');
+  showTyping(400, async () => {
+    addAPILoader('Génération de ta description optimisée...');
+    finalPrompt = await callGeminiPrompt(imageBase64, userVision, clarifQuestions, clarifAnswers, workflow);
+    removeAPILoader();
+    phase = 'confirm';
+    showConfirmation();
+  });
+}
+
+function showConfirmation() {
+  setBadge('Prêt !');
+
+  const workflowLabels = {
+    anim: '🎬 Animation depuis l\'image',
+    svi: '🎞️ Transition entre 2 images',
+    lastframe: '⏪ Ce qui précède l\'image'
+  };
+
+  const answersHtml = clarifAnswers.map((a, i) => {
+    const q = clarifQuestions[i];
+    return `<div class="confirm-row"><span class="confirm-label">${q?.tag || 'Choix'}</span><span>${a}</span></div>`;
+  }).join('');
+
+  const html = `Parfait, voici ce qu'on va créer :<br>
+    <div class="confirm-box">
+      <strong>✅ Résumé</strong>
+      <div class="confirm-row"><span class="confirm-label">Mode</span><span>${workflowLabels[workflow] || workflow}</span></div>
+      ${answersHtml}
+      <div class="prompt-box" style="margin-top:10px;">
+        <span class="prompt-box-label">🧠 Ta description optimisée</span>
+        ${finalPrompt}
+      </div>
+    </div>
+    <br>Lance la génération quand tu es prêt·e 👇`;
+
+  addAIMessage(html);
+  showGenerateBtn();
+}
+
+// ══════════════════════════════════════════
+//  GÉNÉRATION
+// ══════════════════════════════════════════
+function startGeneration() {
+  hideAll();
+  phase = 'generate';
+  setBadge('Génération');
+  const pw = document.getElementById('progressWrap');
+  pw.classList.add('visible');
+
+  const steps = [
+    { pct: 10, label: 'Envoi de l\'image...' },
+    { pct: 25, label: 'Optimisation du prompt...' },
+    { pct: 45, label: 'Envoi à WanVideo sur RunPod...' },
+    { pct: 70, label: 'Génération en cours...' },
+    { pct: 90, label: 'Finalisation...' },
+    { pct: 100, label: '✅ Terminé !' },
+  ];
+
+  let i = 0;
+  const fill = document.getElementById('progressFill');
+  const pctEl = document.getElementById('progressPct');
+  const labelEl = document.getElementById('progressLabel');
+
+  const timer = setInterval(() => {
+    if (i >= steps.length) {
+      clearInterval(timer);
+      setTimeout(() => {
+        pw.classList.remove('visible');
+        setBadge('Terminé ✓');
+        addAIMessage('🎉 Ta vidéo est prête !<br><br><em style="color:var(--muted)">(Dans la version connectée, la vidéo s\'affiche ici avec le bouton de téléchargement)</em>');
+      }, 500);
+      return;
+    }
+    fill.style.width = steps[i].pct + '%';
+    pctEl.textContent = steps[i].pct + '%';
+    labelEl.textContent = steps[i].label;
+    i++;
+  }, 950);
+}
+
+// ══════════════════════════════════════════
+//  APPELS GEMINI
+// ══════════════════════════════════════════
+
+// Appel 0 : analyse image → suggestions créatives
+async function callGeminiSuggestions(imageBase64) {
+  if (SIMULATE_API) {
+    await sleep(1400);
+    return simulateSuggestions(imageBase64);
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/chat/suggestions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: imageBase64 })
+    });
+    const data = await res.json();
+    return data.suggestions;
+  } catch(e) {
+    return simulateSuggestions(imageBase64);
+  }
+}
+
+// Appel détection workflow (quand l'user écrit directement)
+async function callGeminiDetectWorkflow(imageBase64, description) {
+  if (SIMULATE_API) {
+    await sleep(800);
+    return simulateDetectWorkflow(description);
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/chat/detect-workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: imageBase64, description })
+    });
+    const data = await res.json();
+    return data.workflow;
+  } catch(e) {
+    return simulateDetectWorkflow(description);
+  }
+}
+
+// Appel 1 : questions de clarification
+async function callGeminiClarification(imageBase64, vision, workflow) {
+  if (SIMULATE_API) {
+    await sleep(1100);
+    return simulateClarification(vision, workflow);
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/chat/clarification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: imageBase64, vision, workflow })
+    });
+    const data = await res.json();
+    return data.questions;
+  } catch(e) {
+    return simulateClarification(vision, workflow);
+  }
+}
+
+// Appel 2 : prompt final
+async function callGeminiPrompt(imageBase64, vision, questions, answers, workflow) {
+  if (SIMULATE_API) {
+    await sleep(1200);
+    return simulateFinalPrompt(vision, answers);
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/chat/generate-prompt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: imageBase64, vision, questions, answers, workflow })
+    });
+    const data = await res.json();
+    return data.prompt;
+  } catch(e) {
+    return simulateFinalPrompt(vision, answers);
+  }
+}
+
+// ══════════════════════════════════════════
+//  SIMULATIONS (mode démo)
+// ══════════════════════════════════════════
+function simulateSuggestions() {
+  // En réel : Gemini analyse le contenu de l'image et génère des idées adaptées
+  return [
+    {
+      icon: '🎬',
+      title: 'Animer la scène',
+      desc: 'Donne vie à l\'image — mouvements, atmosphère, action',
+      workflow: 'anim',
+      vision: 'Animer les éléments de cette scène de façon naturelle'
+    },
+    {
+      icon: '🎞️',
+      title: 'Créer une transition',
+      desc: 'Partir de cette image vers une autre — je te demanderai l\'image de fin',
+      workflow: 'svi',
+      vision: 'Créer une transition fluide entre cette image et une image de fin'
+    },
+    {
+      icon: '⏪',
+      title: 'Ce qui se passait avant',
+      desc: 'Cette image est la fin — génère ce qui précède',
+      workflow: 'lastframe',
+      vision: 'Générer la séquence qui mène naturellement à cette image'
+    }
+  ];
+}
+
+function simulateDetectWorkflow(description) {
+  const d = description.toLowerCase();
+  if (d.includes('transition') || d.includes('vers') || d.includes('devient') || d.includes('deux image') || d.includes('2 image')) return 'svi';
+  if (d.includes('avant') || d.includes('précède') || d.includes('last frame') || d.includes('fin')) return 'lastframe';
+  return 'anim';
+}
+
+function simulateClarification(vision, workflow) {
+  const v = vision.toLowerCase();
+  const questions = [];
+
+  // Question mouvement
+  questions.push({
+    tag: 'Mouvement',
+    question: 'Quelle est l\'énergie du mouvement que tu imagines ?',
+    choices: [
+      'Lent et contemplatif — doux, presque au ralenti 🌊',
+      'Naturel et fluide — comme dans la vie réelle 🎯',
+      'Dynamique et vif — plein d\'énergie, impactant ⚡'
+    ]
+  });
+
+  // Question caméra si pertinent
+  if (workflow === 'anim' || workflow === 'lastframe') {
+    questions.push({
+      tag: 'Caméra',
+      question: 'Comment la caméra se comporte-t-elle ?',
+      choices: [
+        'Fixe — seul le sujet est en mouvement 📷',
+        'Légère dérive — imperceptible, renforce l\'immersion 🎥',
+        'Mouvement assumé — zoom, travelling ou rotation 🎬'
+      ]
+    });
+  }
+
+  // Question rythme si la description est longue ou complexe
+  if (vision.length > 60 && workflow === 'svi') {
+    questions.push({
+      tag: 'Rythme',
+      question: 'À quelle vitesse se fait la transition ?',
+      choices: [
+        'Très lente — fondu progressif et contemplatif ⏳',
+        'Modérée — naturelle et fluide 🌿',
+        'Rapide — cut dynamique ou morph accéléré ⚡'
+      ]
+    });
+  }
+
+  return questions.slice(0, 3);
+}
+
+function simulateFinalPrompt(vision, answers) {
+  const a = answers.join(', ').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // supprime les accents pour comparaison fiable
+
+  let mouv = 'mouvement fluide et naturel';
+  if (a.includes('contempl') || a.includes('lent') || a.includes('ralenti')) mouv = 'mouvement lent et contemplatif, doux';
+  if (a.includes('dynam') || a.includes('vif') || a.includes('energie') || a.includes('impact')) mouv = 'mouvement dynamique et énergique';
+
+  let cam = '';
+  if (a.includes('fixe') || a.includes('seul le sujet')) cam = 'caméra fixe';
+  else if (a.includes('derive') || a.includes('imperceptible') || a.includes('immersion')) cam = 'légère dérive de caméra, très subtile';
+  else if (a.includes('zoom') || a.includes('travelling') || a.includes('rotation') || a.includes('assume') || a.includes('cinematique') || a.includes('mouvement assume')) cam = 'mouvement de caméra cinématique';
+
+  const camPart = cam ? `, ${cam}` : '';
+  return `${vision}. ${mouv}${camPart}, rendu photoréaliste, qualité cinématique professionnelle.`;
+}
+
+// ══════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════
+function addAIMessage(html) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap';
+  wrap.innerHTML = `<div class="avatar ai">AI</div><div class="bubble ai">${html}</div>`;
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollBottom();
+  return wrap;
+}
+
+function addUserMessage(text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap user';
+  wrap.innerHTML = `<div class="avatar usr">👤</div><div class="bubble user">${text}</div>`;
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollBottom();
+}
+
+function addUserImageBubble(src) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap user';
+  wrap.innerHTML = `<div class="avatar usr">👤</div><div class="image-bubble"><img src="${src}" alt=""></div>`;
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollBottom();
+}
+
+function addAPILoader(label) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap'; wrap.id = 'apiLoader';
+  wrap.innerHTML = `<div class="avatar ai">AI</div><div class="bubble ai"><div class="api-loader"><div class="api-dot"></div>${label}</div></div>`;
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollBottom();
+}
+function removeAPILoader() {
+  const el = document.getElementById('apiLoader');
+  if (el) el.remove();
+}
+
+function showTyping(delay, cb) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap';
+  wrap.innerHTML = `<div class="avatar ai">AI</div><div class="bubble ai"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollBottom();
+  setTimeout(() => { wrap.remove(); cb(); }, delay);
+}
+
+function setBadge(text) {
+  const b = document.getElementById('stepBadge');
+  b.textContent = text;
+  b.classList.add('ping');
+  setTimeout(() => b.classList.remove('ping'), 900);
+}
+
+function hideAll() {
+  document.getElementById('uploadZone2').classList.remove('visible');
+  document.getElementById('inputRow').classList.remove('visible');
+  document.getElementById('generateZone').classList.remove('visible');
+  document.getElementById('progressWrap').classList.remove('visible');
+}
+
+function showInputRow(ph) {
+  const row = document.getElementById('inputRow');
+  row.classList.add('visible');
+  const inp = document.getElementById('textInput');
+  if (ph) inp.placeholder = ph;
+  setTimeout(() => inp.focus(), 80);
+}
+
+function hideInputRow() {
+  document.getElementById('inputRow').classList.remove('visible');
+}
+
+function showUpload2() {
+  document.getElementById('uploadZone2').classList.add('visible');
+}
+
+function showGenerateBtn() {
+  document.getElementById('generateZone').classList.add('visible');
+}
+
+function scrollBottom() {
+  const el = document.getElementById('chatMessages');
+  setTimeout(() => el.scrollTop = el.scrollHeight, 40);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>

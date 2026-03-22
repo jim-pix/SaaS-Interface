@@ -873,6 +873,32 @@ function pickChoice(choice, btn, container) {
   disableChoices(container);
   btn.classList.add('picked');
   addUserMessage(choice);
+
+  // Détecter si c'est une réponse à la question de workflow
+  const q = clarifQuestions[currentQIndex];
+  if (q && q.tag === 'Workflow') {
+    if (choice.includes('Transition') || choice.includes('🎞️')) {
+      workflow = 'svi';
+    } else if (choice.includes('précède') || choice.includes('⏪')) {
+      workflow = 'lastframe';
+    } else {
+      workflow = 'anim';
+    }
+    currentQIndex++;
+    // Si SVI → demander la 2e image avant de continuer
+    if (workflow === 'svi') {
+      hideAll();
+      setBadge('Image de fin');
+      showTyping(500, () => {
+        addAIMessage(`Parfait ! Pour créer la transition, j'ai besoin de ton <strong>image de fin</strong> — l'état final de la scène.`);
+        showUpload2();
+      });
+      return;
+    }
+    setTimeout(() => askNextQuestion(), 350);
+    return;
+  }
+
   clarifAnswers.push(choice);
   currentQIndex++;
   setTimeout(() => askNextQuestion(), 350);

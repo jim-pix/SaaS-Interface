@@ -1018,15 +1018,26 @@ async function callGeminiClarification(imageBase64, vision, workflow) {
     return simulateClarification(vision, workflow);
   }
   try {
+    console.log('🔵 [clarification] Envoi vers', `${BACKEND_URL}/chat/clarification`);
     const res = await fetch(`${BACKEND_URL}/chat/clarification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: imageBase64, vision, workflow })
     });
+    console.log('🟡 [clarification] Status HTTP =', res.status);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('🔴 [clarification] Erreur :', errText);
+      addAIMessage(`⚠️ Erreur backend (${res.status}) : ${errText}`);
+      return { workflow: 'anim', questions: [] };
+    }
     const data = await res.json();
-    return data.questions;
+    console.log('🟢 [clarification] Réponse :', data);
+    return data; // retourne {workflow, questions}
   } catch(e) {
-    return simulateClarification(vision, workflow);
+    console.error('🔴 [clarification] Exception :', e);
+    addAIMessage(`⚠️ Erreur réseau : ${e.message}`);
+    return { workflow: 'anim', questions: [] };
   }
 }
 

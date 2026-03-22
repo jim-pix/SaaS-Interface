@@ -504,12 +504,102 @@
     from { opacity:0; transform:translateY(14px); }
     to   { opacity:1; transform:translateY(0); }
   }
+
+  /* ══ LOGIN ══ */
+  #loginScreen {
+    width: 100%; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    width: 100%; max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 40px;
+    animation: fadeUp 0.6s ease both;
+    position: relative;
+  }
+  .login-card::before {
+    content: '';
+    position: absolute; top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 50%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(204,0,0,0.5), transparent);
+  }
+  .login-card .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2em; letter-spacing: -1.5px; color: #fff; }
+  .login-card .logo span { color: var(--red); }
+  .login-card .logo-tagline { font-size: 0.82em; color: var(--muted); margin-top: 6px; margin-bottom: 36px; font-weight: 300; }
+  .login-label { font-size: 0.72em; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #444; display: block; margin-bottom: 10px; }
+  .token-input {
+    width: 100%; background: #0e0e0e; border: 1.5px solid #1e1e1e;
+    border-radius: 12px; padding: 13px 16px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.92em;
+    outline: none; transition: border-color 0.2s; letter-spacing: 1px;
+  }
+  .token-input:focus { border-color: rgba(204,0,0,0.4); }
+  .token-input::placeholder { color: #333; letter-spacing: 0; }
+  .login-btn {
+    width: 100%; margin-top: 16px; padding: 14px;
+    background: var(--red); border: none; border-radius: 12px;
+    color: #fff; font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.95em; cursor: pointer; transition: all 0.2s;
+  }
+  .login-btn:hover { background: #ff2020; transform: translateY(-1px); }
+  .login-error { font-size: 0.8em; color: #ff4444; margin-top: 10px; min-height: 18px; text-align: center; }
+
+  /* ══ PARAMÈTRES TECHNIQUES ══ */
+  .params-zone { display: none; padding: 12px 0 4px; }
+  .params-zone.visible { display: block; }
+  .params-title { font-size: 0.72em; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #444; margin-bottom: 12px; }
+  .params-grid { display: flex; flex-direction: column; gap: 10px; }
+  .param-group { display: flex; flex-direction: column; gap: 6px; }
+  .param-label { font-size: 0.78em; color: var(--muted); }
+  .param-hint { font-size: 0.9em; color: #383838; font-style: italic; }
+  .param-options { display: flex; gap: 6px; flex-wrap: wrap; }
+  .param-btn {
+    background: #111; border: 1px solid #252525; border-radius: 8px;
+    padding: 6px 12px; color: #555; font-size: 0.8em;
+    cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .param-btn:hover { border-color: #444; color: #888; }
+  .param-btn.active { border-color: rgba(204,0,0,0.5); background: var(--red-dim); color: #ffaaaa; }
+
+  /* LoRA list */
+  .lora-list { display: none; margin-top: 10px; flex-direction: column; gap: 6px; }
+  .lora-list.visible { display: flex; }
+  .lora-card {
+    background: #111; border: 1px solid #252525; border-radius: 10px;
+    padding: 10px 13px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .lora-card:hover { border-color: #444; }
+  .lora-card.selected { border-color: rgba(204,0,0,0.5); background: var(--red-dim); }
+  .lora-card-name { font-size: 0.84em; color: #ccc; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .lora-card-desc { font-size: 0.74em; color: var(--muted); margin-top: 2px; }
+  .lora-check { width: 16px; height: 16px; border: 1px solid #333; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7em; }
 </style>
 </head>
 <body>
 
+<!-- ══ LOGIN ══ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">Easy<span>AI</span></div>
+    <div class="logo-tagline">Ton studio vidéo IA personnel</div>
+    <div class="login-form">
+      <label class="login-label">Ton token d'accès</label>
+      <input type="password" id="tokenInput" class="token-input"
+        placeholder="Colle ton token ici..."
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <button class="login-btn" onclick="doLogin()">Accéder →</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ ÉCRAN D'ACCUEIL ══ -->
-<div id="welcomeScreen">
+<div id="welcomeScreen" style="display:none;">
   <div>
     <div class="logo">Easy<span>AI</span></div>
     <div class="logo-tagline">Charge une image. On s'occupe du reste.</div>
@@ -556,6 +646,56 @@
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
     </div>
 
+    <!-- Paramètres techniques -->
+    <div class="params-zone" id="paramsZone">
+      <div class="params-title">⚙️ Paramètres de génération</div>
+
+      <div class="params-grid">
+        <!-- Format -->
+        <div class="param-group">
+          <div class="param-label">Format</div>
+          <div class="param-options">
+            <button class="param-btn active" data-group="format" data-value="16:9" onclick="selectParam(this,'format')">16/9</button>
+            <button class="param-btn" data-group="format" data-value="9:16" onclick="selectParam(this,'format')">9/16</button>
+          </div>
+        </div>
+
+        <!-- Résolution -->
+        <div class="param-group">
+          <div class="param-label">Résolution</div>
+          <div class="param-options">
+            <button class="param-btn active" data-group="resolution" data-value="full" onclick="selectParam(this,'resolution')">1280×720</button>
+            <button class="param-btn" data-group="resolution" data-value="half" onclick="selectParam(this,'resolution')">640×360</button>
+          </div>
+        </div>
+
+        <!-- Durée -->
+        <div class="param-group">
+          <div class="param-label">Durée</div>
+          <div class="param-options">
+            <button class="param-btn" data-group="duration" data-value="33" onclick="selectParam(this,'duration')">2s</button>
+            <button class="param-btn active" data-group="duration" data-value="49" onclick="selectParam(this,'duration')">3s</button>
+            <button class="param-btn" data-group="duration" data-value="65" onclick="selectParam(this,'duration')">4s</button>
+            <button class="param-btn" data-group="duration" data-value="81" onclick="selectParam(this,'duration')">5s</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LoRA -->
+      <div class="param-group" style="margin-top:10px;">
+        <div class="param-label">
+          LoRA
+          <span class="param-hint">— un style visuel à appliquer. Si tu ne sais pas ce que c'est, laisse sur Non.</span>
+        </div>
+        <div class="param-options">
+          <button class="param-btn active" data-group="lora" data-value="none" onclick="toggleLora(false)">Non</button>
+          <button class="param-btn" data-group="lora" data-value="yes" onclick="toggleLora(true)">Oui</button>
+        </div>
+        <!-- Liste des LoRAs (cachée par défaut) -->
+        <div class="lora-list" id="loraList"></div>
+      </div>
+    </div>
+
     <!-- Bouton générer -->
     <div class="generate-zone" id="generateZone">
       <button class="gen-btn" onclick="startGeneration()">🚀 Générer la vidéo</button>
@@ -578,21 +718,71 @@
 // ══════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════
-const BACKEND_URL = 'https://wan22-backend.fly.dev'; // ← remplace par ton URL Fly.io ex: https://wan22-backend.fly.dev
-const SIMULATE_API = false; // ← false = vrai backend Gemini
+const BACKEND_URL = 'https://wan22-backend.fly.dev';
+const SIMULATE_API = false;
+
+// ══════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════
+let apiToken = localStorage.getItem('easyai_token') || '';
+
+function doLogin() {
+  const token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+  document.getElementById('loginError').textContent = '';
+
+  fetch(`${BACKEND_URL}/me`, {
+    headers: { 'X-Api-Token': token }
+  })
+  .then(r => {
+    if (!r.ok) throw new Error();
+    return r.json();
+  })
+  .then(data => {
+    apiToken = token;
+    localStorage.setItem('easyai_token', token);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'flex';
+  })
+  .catch(() => {
+    document.getElementById('loginError').textContent = 'Token invalide — vérifie et réessaie.';
+  });
+}
+
+// Vérif auto au chargement
+if (apiToken) {
+  fetch(`${BACKEND_URL}/me`, { headers: { 'X-Api-Token': apiToken } })
+  .then(r => {
+    if (!r.ok) throw new Error();
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'flex';
+  })
+  .catch(() => {
+    localStorage.removeItem('easyai_token');
+    apiToken = '';
+  });
+}
 
 // ══════════════════════════════════════════
 //  ÉTAT
 // ══════════════════════════════════════════
-let imageBase64    = null; // image principale
-let imageBase64_2  = null; // 2e image (SVI)
-let userVision     = '';   // description validée
-let workflow       = null; // 'anim' | 'svi' | 'lastframe'
+let imageBase64    = null;
+let imageBase64_2  = null;
+let userVision     = '';
+let workflow       = null;
 let clarifQuestions = [];
 let clarifAnswers   = [];
 let currentQIndex   = 0;
 let finalPrompt     = '';
-let phase = 'welcome'; // welcome | suggest | describe | clarify | upload2 | confirm | generate
+let phase = 'welcome';
+
+// Paramètres techniques (valeurs par défaut)
+let techParams = {
+  format: '16:9',
+  resolution: 'full',  // full=1280x720, half=640x360
+  duration: 49,        // frames : 33=2s, 49=3s, 65=4s, 81=5s
+  lora: null           // {id, name, filename, strength} ou null
+};
 
 // ══════════════════════════════════════════
 //  UPLOAD ACCUEIL
@@ -651,6 +841,7 @@ function resetAll() {
   clarifQuestions = []; clarifAnswers = [];
   currentQIndex = 0; finalPrompt = '';
   phase = 'welcome';
+  techParams = { format: '16:9', resolution: 'full', duration: 49, lora: null };
   document.getElementById('welcomePreview').style.display = 'none';
   document.getElementById('welcomePreview').src = '';
   document.getElementById('welcomeLabel').style.display = 'flex';
@@ -658,6 +849,87 @@ function resetAll() {
   document.getElementById('textInput').value = '';
   document.getElementById('preview2').style.display = 'none';
   document.getElementById('preview2').src = '';
+  document.getElementById('paramsZone').classList.remove('visible');
+  document.getElementById('loraList').classList.remove('visible');
+  document.getElementById('loraList').innerHTML = '';
+  // Reset boutons params
+  document.querySelectorAll('.param-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-group="format"][data-value="16:9"]')?.classList.add('active');
+  document.querySelector('[data-group="resolution"][data-value="full"]')?.classList.add('active');
+  document.querySelector('[data-group="duration"][data-value="49"]')?.classList.add('active');
+  document.querySelector('[data-group="lora"][data-value="none"]')?.classList.add('active');
+}
+
+// ══════════════════════════════════════════
+//  PARAMÈTRES TECHNIQUES
+// ══════════════════════════════════════════
+function selectParam(btn, group) {
+  document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  techParams[group] = btn.dataset.value;
+}
+
+function toggleLora(show) {
+  document.querySelectorAll('[data-group="lora"]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-group="lora"][data-value="${show ? 'yes' : 'none'}"]`)?.classList.add('active');
+  const list = document.getElementById('loraList');
+  if (show) {
+    list.classList.add('visible');
+    if (list.innerHTML === '') loadLoras();
+  } else {
+    list.classList.remove('visible');
+    techParams.lora = null;
+  }
+}
+
+async function loadLoras() {
+  const list = document.getElementById('loraList');
+  list.innerHTML = '<div style="font-size:0.8em;color:var(--muted);padding:6px 0">Chargement...</div>';
+  try {
+    const res = await fetch(`${BACKEND_URL}/loras`, {
+      headers: { 'X-Api-Token': apiToken }
+    });
+    const loras = await res.json();
+    if (!loras.length) {
+      list.innerHTML = '<div style="font-size:0.8em;color:var(--muted);padding:6px 0">Aucun LoRA disponible.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    loras.forEach(lora => {
+      const card = document.createElement('div');
+      card.className = 'lora-card';
+      card.innerHTML = `
+        <div class="lora-check" id="lcheck_${lora.id}"></div>
+        <div>
+          <div class="lora-card-name">${lora.name}</div>
+          ${lora.description ? `<div class="lora-card-desc">${lora.description}</div>` : ''}
+        </div>
+      `;
+      card.onclick = () => selectLora(lora, card);
+      list.appendChild(card);
+    });
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:0.8em;color:#ff4444;padding:6px 0">Erreur de chargement.</div>';
+  }
+}
+
+function selectLora(lora, card) {
+  // Toggle — si déjà sélectionné, désélectionne
+  if (techParams.lora?.id === lora.id) {
+    techParams.lora = null;
+    card.classList.remove('selected');
+    document.getElementById(`lcheck_${lora.id}`).textContent = '';
+    return;
+  }
+  // Désélectionne tout
+  document.querySelectorAll('.lora-card').forEach(c => {
+    c.classList.remove('selected');
+  });
+  document.querySelectorAll('.lora-check').forEach(c => c.textContent = '');
+  // Sélectionne
+  techParams.lora = { id: lora.id, name: lora.name, filename: lora.filename, strength: lora.default_strength };
+  card.classList.add('selected');
+  document.getElementById(`lcheck_${lora.id}`).textContent = '✓';
 }
 
 // ══════════════════════════════════════════
@@ -956,6 +1228,7 @@ function showConfirmation() {
     </div>`;
 
   addAIMessage(html);
+  document.getElementById('paramsZone').classList.add('visible');
   showGenerateBtn();
 }
 
@@ -984,6 +1257,14 @@ function startGeneration() {
   hideAll();
   phase = 'generate';
   setBadge('Génération');
+
+  // Paramètres résolus
+  const sizeScale = techParams.resolution === 'full' ? 65 : 32;
+  const videoFormat = techParams.format;
+  const videoLength = parseInt(techParams.duration);
+  const loras = techParams.lora ? [{ filename: techParams.lora.filename, strength: techParams.lora.strength }] : [];
+
+  console.log('🚀 Génération avec params :', { videoFormat, sizeScale, videoLength, loras, prompt: finalPrompt });
   const pw = document.getElementById('progressWrap');
   pw.classList.add('visible');
 
@@ -1268,6 +1549,7 @@ function hideAll() {
   document.getElementById('inputRow').classList.remove('visible');
   document.getElementById('generateZone').classList.remove('visible');
   document.getElementById('progressWrap').classList.remove('visible');
+  document.getElementById('paramsZone').classList.remove('visible');
 }
 
 function showInputRow(ph) {

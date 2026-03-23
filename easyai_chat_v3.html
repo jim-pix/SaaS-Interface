@@ -774,6 +774,7 @@ let clarifQuestions = [];
 let clarifAnswers   = [];
 let currentQIndex   = 0;
 let finalPrompt     = '';
+let finalPromptEN   = ''; // ⚠️ TEMPORAIRE debug
 let phase = 'welcome';
 
 // Paramètres techniques (valeurs par défaut)
@@ -1189,7 +1190,9 @@ async function onAllAnswered() {
   setBadge('Prompt final');
   showTyping(400, async () => {
     addAPILoader('Génération de ta description optimisée...');
-    finalPrompt = await callGeminiPrompt(imageBase64, userVision, clarifQuestions, clarifAnswers, workflow);
+    const promptResult = await callGeminiPrompt(imageBase64, userVision, clarifQuestions, clarifAnswers, workflow);
+    finalPrompt = promptResult.prompt || promptResult;
+    finalPromptEN = promptResult.prompt_en || '';
     removeAPILoader();
     phase = 'confirm';
     showConfirmation();
@@ -1219,6 +1222,11 @@ function showConfirmation() {
         <span class="prompt-box-label">🧠 Ta description optimisée</span>
         ${finalPrompt}
       </div>
+      ${finalPromptEN ? `
+      <div class="prompt-box" style="margin-top:8px;border-color:#1a1a3a;background:#080812;">
+        <span class="prompt-box-label" style="color:#333;">🔧 DEBUG — Prompt WanVideo (anglais)</span>
+        <span style="font-size:0.78em;color:#666;font-style:normal;">${finalPromptEN}</span>
+      </div>` : ''}
     </div>
     <br>Lance la génération quand tu es prêt·e 👇
     <div style="margin-top:10px;">
@@ -1239,6 +1247,7 @@ function restartFromDescription() {
   clarifAnswers = [];
   currentQIndex = 0;
   finalPrompt = '';
+  finalPromptEN = '';
   imageBase64_2 = null;
   phase = 'describe';
 
@@ -1375,7 +1384,8 @@ async function callGeminiClarification(imageBase64, vision, workflow) {
 async function callGeminiPrompt(imageBase64, vision, questions, answers, workflow) {
   if (SIMULATE_API) {
     await sleep(1200);
-    return simulateFinalPrompt(vision, answers);
+    const prompt = simulateFinalPrompt(vision, answers);
+    return { prompt, prompt_en: '[Mode démo — prompt anglais non disponible]' };
   }
   try {
     const res = await fetch(`${BACKEND_URL}/chat/generate-prompt`, {
@@ -1383,10 +1393,17 @@ async function callGeminiPrompt(imageBase64, vision, questions, answers, workflo
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: imageBase64, vision, questions, answers, workflow })
     });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('🔴 [generate-prompt] Erreur :', err);
+      return { prompt: 'Erreur de génération', prompt_en: '' };
+    }
     const data = await res.json();
-    return data.prompt;
+    console.log('🟢 [generate-prompt] Résultat :', data);
+    return data; // { prompt, prompt_en, workflow }
   } catch(e) {
-    return simulateFinalPrompt(vision, answers);
+    console.error('🔴 [generate-prompt] Exception :', e);
+    return { prompt: simulateFinalPrompt(vision, answers), prompt_en: '' };
   }
 }
 

@@ -1278,50 +1278,200 @@ function restartFromDescription() {
 // ══════════════════════════════════════════
 //  GÉNÉRATION
 // ══════════════════════════════════════════
-function startGeneration() {
+async function startGeneration() {
   hideAll();
   phase = 'generate';
   setBadge('Génération');
 
-  // Paramètres résolus
-  const sizeScale = techParams.resolution === 'full' ? 65 : 32;
+  // Résolution des paramètres techniques
+  const sizeScale   = techParams.resolution === 'full' ? 65 : 32;
   const videoFormat = techParams.format;
   const videoLength = parseInt(techParams.duration);
-  const loras = techParams.lora ? [{ filename: techParams.lora.filename, strength: techParams.lora.strength }] : [];
+  const loras       = techParams.lora
+    ? [{ filename: techParams.lora.filename, strength: techParams.lora.strength, lora_type: 'standard' }]
+    : [];
 
-  console.log('🚀 Génération avec params :', { videoFormat, sizeScale, videoLength, loras, prompt: finalPrompt });
+  // Mapping workflow → workflow_name RunPod
+  const workflowMap = {
+    anim:      'animation_image',
+    svi:       'animation_flf',
+    lastframe: 'animation_lfo'
+  };
+  const workflowName = workflowMap[workflow] || 'animation_image';
+
+  // Payload pour le backend Fly.io → RunPod
+  const payload = {
+    user_prompt:       finalPromptEN || finalPrompt,
+    negative_prompt:   finalNegative || '',
+    image_base64:      imageBase64    ? imageBase64.split(',')[1]    : null,
+    last_frame_base64: imageBase64_2  ? imageBase64_2.split(',')[1]  : null,
+    workflow_name:     workflowName,
+    workflow_type:     1,
+    video_format:      videoFormat,
+    size_scale:        sizeScale,
+    video_length:      videoLength,
+    frame_rate:        16,
+    rife_multiplier:   2,
+    motion_amplitude:  1.0,
+    color_protect:     false,
+    correct_strength:  0.0,
+    use_first_frame:   workflow === 'svi',
+    loras:             loras
+  };
+
+  console.log('🚀 Payload RunPod :', { ...payload, image_base64: '[truncated]', last_frame_base64: '[truncated]' });
+
   const pw = document.getElementById('progressWrap');
   pw.classList.add('visible');
+  updateProgress(5, 'Envoi à RunPod...');
 
-  const steps = [
-    { pct: 10, label: 'Envoi de l\'image...' },
-    { pct: 25, label: 'Optimisation du prompt...' },
-    { pct: 45, label: 'Envoi à WanVideo sur RunPod...' },
-    { pct: 70, label: 'Génération en cours...' },
-    { pct: 90, label: 'Finalisation...' },
-    { pct: 100, label: '✅ Terminé !' },
-  ];
+  try {
+    // 1 — Lancer le job
+    const res = await fetch(`${BACKEND_URL}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Token': apiToken
+      },
+      body: JSON.stringify(payload)
+    });
 
-  let i = 0;
-  const fill = document.getElementById('progressFill');
-  const pctEl = document.getElementById('progressPct');
-  const labelEl = document.getElementById('progressLabel');
-
-  const timer = setInterval(() => {
-    if (i >= steps.length) {
-      clearInterval(timer);
-      setTimeout(() => {
-        pw.classList.remove('visible');
-        setBadge('Terminé ✓');
-        addAIMessage('🎉 Ta vidéo est prête !<br><br><em style="color:var(--muted)">(Dans la version connectée, la vidéo s\'affiche ici avec le bouton de téléchargement)</em>');
-      }, 500);
-      return;
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Erreur backend');
     }
-    fill.style.width = steps[i].pct + '%';
-    pctEl.textContent = steps[i].pct + '%';
-    labelEl.textContent = steps[i].label;
-    i++;
-  }, 950);
+
+    const job = await res.json();
+    const jobId = job.id;
+    console.log('✅ Job créé :', jobId);
+    updateProgress(15, 'Job en cours sur RunPod...');
+
+    // 2 — Polling statut
+    await pollJobStatus(jobId);
+
+  } catch(e) {
+    console.error('❌ Erreur génération :', e);
+    pw.classList.remove('visible');
+    setBadge('Erreur');
+    addAIMessage(`⚠️ Erreur : ${e.message}`);
+  }
+}
+
+async function pollJobStatus(jobId) {
+  const pw = document.getElementById('progressWrap');
+  const maxAttempts = 300; // ~10 min
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    await sleep(3000);
+    attempts++;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/status/${jobId}`, {
+        headers: { 'X-Api-Token': apiToken }
+      });
+      const data = await res.json();
+      const status = data.status;
+
+      console.log(`📊 Status [${attempts}] :`, status);
+
+      if (status === 'IN_QUEUE') {
+        updateProgress(20, 'En attente dans la file RunPod...');
+      } else if (status === 'IN_PROGRESS') {
+        const pct = Math.min(20 + attempts * 2, 85);
+        updateProgress(pct, 'Génération WanVideo en cours...');
+      } else if (status === 'COMPLETED') {
+        updateProgress(100, '✅ Terminé !');
+        const output = data.output;
+        const videoUrl = output?.download_url || output?.video_urls?.[0];
+
+        setTimeout(async () => {
+          pw.classList.remove('visible');
+          setBadge('Terminé ✓');
+
+          if (videoUrl) {
+            // Sauvegarder en base
+            await saveGeneration(jobId, videoUrl);
+            showVideoResult(videoUrl, jobId);
+          } else {
+            addAIMessage('🎉 Génération terminée mais aucune vidéo trouvée. Vérifie les logs RunPod.');
+          }
+        }, 800);
+        return;
+
+      } else if (status === 'FAILED' || status === 'CANCELLED') {
+        throw new Error(`Job ${status} : ${data.error || 'erreur inconnue'}`);
+      }
+
+    } catch(e) {
+      if (e.message.includes('FAILED') || e.message.includes('CANCELLED')) throw e;
+      console.warn('⚠️ Erreur polling :', e.message);
+    }
+  }
+  throw new Error('Timeout — génération trop longue');
+}
+
+function updateProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function showVideoResult(videoUrl, jobId) {
+  const html = `🎉 Ta vidéo est prête !<br><br>
+    <video controls style="width:100%;border-radius:10px;margin:8px 0;"
+      src="${videoUrl}" playsinline></video>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button onclick="downloadResult('${videoUrl}','${jobId}')"
+        style="flex:1;padding:10px;background:var(--red);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">
+        📥 Télécharger
+      </button>
+    </div>`;
+  addAIMessage(html);
+
+  // Option pour recommencer
+  setTimeout(() => {
+    const html2 = `Tu veux créer une autre vidéo ?`;
+    const wrap = addAIMessage(html2);
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.style.marginTop = '8px';
+    btn.innerHTML = `<span class="cnum">↩</span>Recommencer avec une nouvelle image`;
+    btn.onclick = () => goBack();
+    wrap.querySelector('.bubble').appendChild(btn);
+  }, 1000);
+}
+
+async function saveGeneration(jobId, videoUrl) {
+  try {
+    await fetch(`${BACKEND_URL}/generations/save?job_id=${encodeURIComponent(jobId)}&video_url=${encodeURIComponent(videoUrl)}&user_prompt=${encodeURIComponent(finalPrompt)}`, {
+      method: 'POST',
+      headers: { 'X-Api-Token': apiToken }
+    });
+  } catch(e) {
+    console.warn('⚠️ Save generation failed :', e);
+  }
+}
+
+async function downloadResult(videoUrl, jobId) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const downloadUrl = `${BACKEND_URL}/download/${jobId}?token=${encodeURIComponent(apiToken)}`;
+
+  if (isIOS && navigator.share) {
+    try {
+      await navigator.share({ title: 'Ma vidéo EasyAI', url: downloadUrl });
+      return;
+    } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  if (isIOS) {
+    window.location.href = downloadUrl;
+    return;
+  }
+  // Desktop/Android
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = `easyai_${jobId.slice(0,8)}.mp4`;
+  a.click();
 }
 
 // ══════════════════════════════════════════

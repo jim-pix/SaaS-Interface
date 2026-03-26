@@ -775,6 +775,8 @@ let clarifAnswers   = [];
 let currentQIndex   = 0;
 let finalPrompt     = '';
 let finalPromptEN   = ''; // ⚠️ TEMPORAIRE debug
+let finalNegative   = ''; // ⚠️ TEMPORAIRE debug
+let finalMovement   = ''; // ⚠️ TEMPORAIRE debug
 let phase = 'welcome';
 
 // Paramètres techniques (valeurs par défaut)
@@ -1193,6 +1195,8 @@ async function onAllAnswered() {
     const promptResult = await callGeminiPrompt(imageBase64, userVision, clarifQuestions, clarifAnswers, workflow);
     finalPrompt = promptResult.prompt || promptResult;
     finalPromptEN = promptResult.prompt_en || '';
+    finalNegative = promptResult.negative || '';
+    finalMovement = promptResult.movement || '';
     removeAPILoader();
     phase = 'confirm';
     showConfirmation();
@@ -1223,9 +1227,19 @@ function showConfirmation() {
         ${finalPrompt}
       </div>
       ${finalPromptEN ? `
-      <div class="prompt-box" style="margin-top:8px;border-color:#1a1a3a;background:#080812;">
-        <span class="prompt-box-label" style="color:#333;">🔧 DEBUG — Prompt WanVideo (anglais)</span>
-        <span style="font-size:0.78em;color:#666;font-style:normal;">${finalPromptEN}</span>
+      <div class="prompt-box" style="margin-top:8px;border-color:#1a2a1a;background:#08120a;">
+        <span class="prompt-box-label" style="color:#2a4a2a;">🔧 DEBUG — Positive (WanVideo)</span>
+        <span style="font-size:0.78em;color:#4a7a4a;font-style:normal;">${finalPromptEN}</span>
+      </div>` : ''}
+      ${finalNegative ? `
+      <div class="prompt-box" style="margin-top:6px;border-color:#2a1a1a;background:#120808;">
+        <span class="prompt-box-label" style="color:#4a2a2a;">🔧 DEBUG — Negative (WanVideo)</span>
+        <span style="font-size:0.78em;color:#7a4a4a;font-style:normal;">${finalNegative}</span>
+      </div>` : ''}
+      ${finalMovement ? `
+      <div class="prompt-box" style="margin-top:6px;border-color:#1a1a2a;background:#08081a;">
+        <span class="prompt-box-label" style="color:#2a2a4a;">🔧 DEBUG — Movement (WanVideo)</span>
+        <span style="font-size:0.78em;color:#4a4a7a;font-style:normal;">${finalMovement}</span>
       </div>` : ''}
     </div>
     <br>Lance la génération quand tu es prêt·e 👇
@@ -1248,6 +1262,8 @@ function restartFromDescription() {
   currentQIndex = 0;
   finalPrompt = '';
   finalPromptEN = '';
+  finalNegative = '';
+  finalMovement = '';
   imageBase64_2 = null;
   phase = 'describe';
 

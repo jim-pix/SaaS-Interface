@@ -1064,6 +1064,7 @@ function sendMessage() {
       addAPILoader('Analyse de ta demande...');
       const result = await callGeminiClarification(imageBase64, text, null);
       removeAPILoader();
+      if (!result) return; // 429 — message déjà affiché
       workflow = result.workflow;
       clarifQuestions = result.questions;
       clarifAnswers = [];
@@ -1248,6 +1249,7 @@ async function onAllAnswered() {
   showTyping(400, async () => {
     addAPILoader('Génération de ta description optimisée...');
     const promptResult = await callGeminiPrompt(imageBase64, userVision, clarifQuestions, clarifAnswers, workflow);
+    if (!promptResult) return; // 429 — message déjà affiché
     finalPrompt = promptResult.prompt || promptResult;
     finalPromptEN = promptResult.prompt_en || '';
     finalNegative = promptResult.negative || '';
@@ -1592,6 +1594,14 @@ async function callGeminiClarification(imageBase64, vision, workflow) {
       body: JSON.stringify({ image_base64: imageBase64, vision, workflow })
     });
     console.log('🟡 [clarification] Status HTTP =', res.status);
+    if (res.status === 429) {
+      const err = await res.json();
+      const wait = err.detail?.retry_in || 60;
+      removeAPILoader();
+      addAIMessage(`⏳ Notre service IA est momentanément saturé.<br><br>Réessaie dans <strong>${wait} secondes</strong> environ. 🙏`);
+      setBadge('En pause');
+      return null;
+    }
     if (!res.ok) {
       const errText = await res.text();
       console.error('🔴 [clarification] Erreur :', errText);
@@ -1621,6 +1631,14 @@ async function callGeminiPrompt(imageBase64, vision, questions, answers, workflo
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: imageBase64, vision, questions, answers, workflow })
     });
+    if (res.status === 429) {
+      const err = await res.json();
+      const wait = err.detail?.retry_in || 60;
+      removeAPILoader();
+      addAIMessage(`⏳ Notre service IA est momentanément saturé.<br><br>Réessaie dans <strong>${wait} secondes</strong> environ. 🙏`);
+      setBadge('En pause');
+      return null;
+    }
     if (!res.ok) {
       const err = await res.text();
       console.error('🔴 [generate-prompt] Erreur :', err);

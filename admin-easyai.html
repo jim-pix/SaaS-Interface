@@ -970,7 +970,7 @@
 
   // ── INIT ──
   window.onload = () => {
-    const savedUrl    = localStorage.getItem('easyai_url');
+    const savedUrl    = localStorage.getItem('easyai_url') || 'https://wan22-backend.fly.dev';
     const savedSecret = localStorage.getItem('easyai_secret');
     if (savedUrl)    document.getElementById('apiUrl').value      = savedUrl;
     if (savedSecret) document.getElementById('adminSecret').value = savedSecret;

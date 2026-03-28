@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyAI — Génération</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: rgba(8, 16, 35, 0.82);
+    --border: rgba(100, 160, 255, 0.15);
+    --text: #e8f0ff;
+    --muted: #7a9acc;
+    --action: #3a3f4a;
+    --action-hover: #4a5060;
+    --blue: #60a8ff;
+    --blue-dim: rgba(96, 168, 255, 0.12);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    background-image: url('Gemini_Generated_Image_ctmtkyctmtkyctmt.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    width: 100%;
+    max-width: 680px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(8, 16, 35, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .back-btn {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1em; text-decoration: none;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .back-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2em;
+    letter-spacing: -0.5px;
+    color: #fff;
+    text-decoration: none;
+  }
+  .logo span { color: var(--blue); }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .history-btn {
+    font-size: 0.75em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    background: rgba(100,160,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .history-btn:hover { color: var(--blue); border-color: rgba(100,160,255,0.4); }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    width: 100%;
+    max-width: 680px;
+    padding: 24px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── MINIATURE SHIMMER ── */
+  .preview-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0a0f1a;
+  }
+
+  .preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(8px) saturate(0.4) brightness(0.6);
+    transform: scale(1.05);
+    display: block;
+  }
+
+  /* Overlay sombre */
+  .preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 10, 25, 0.45);
+  }
+
+  /* Barre shimmer qui défile */
+  .shimmer-bar {
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.06) 30%,
+      rgba(255,255,255,0.18) 50%,
+      rgba(255,255,255,0.06) 70%,
+      transparent 100%
+    );
+    animation: shimmer 2.2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { left: -60%; }
+    100% { left: 120%; }
+  }
+
+  /* Badge état centré sur la miniature */
+  .preview-status {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(8, 16, 35, 0.75);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.78em;
+    color: var(--text);
+    white-space: nowrap;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+    animation: pulse-dot 1.2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 0.3; transform: scale(0.8); }
+    50%     { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* Miniature mode terminé */
+  .preview-wrap.done .preview-img {
+    filter: none;
+    transform: scale(1);
+    transition: all 0.8s ease;
+  }
+  .preview-wrap.done .shimmer-bar { display: none; }
+  .preview-wrap.done .preview-overlay { display: none; }
+
+  /* ── CHRONO + JAUGE ── */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .stat-card {
+    flex: 1;
+    background: rgba(8, 16, 35, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stat-label {
+    font-size: 0.68em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6em;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .stat-value.blue { color: var(--blue); }
+
+  /* Progress bar */
+  .progress-card {
+    background: rgba(8, 16, 35, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .progress-label {
+    font-size: 0.82em;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .progress-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82em;
+    color: var(--blue);
+  }
+
+  .progress-track {
+    height: 4px;
+    background: rgba(100, 160, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3a6fd8, #60a8ff);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.6s ease;
+  }
+
+  /* ── LOG ── */
+  .log-card {
+    background: rgba(5, 10, 25, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .log-title {
+    font-size: 0.68em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .log-entries::-webkit-scrollbar { width: 2px; }
+  .log-entries::-webkit-scrollbar-thumb { background: #2a3a5a; }
+
+  .log-entry {
+    display: flex;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.76em;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease both;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  .log-time { color: #3a5a8a; flex-shrink: 0; }
+  .log-msg  { color: var(--muted); }
+  .log-msg.ok   { color: #5aaa7a; }
+  .log-msg.err  { color: #cc5555; }
+  .log-msg.info { color: var(--blue); }
+
+  /* ── RÉSULTAT VIDÉO ── */
+  .result-card {
+    display: none;
+    background: rgba(8, 16, 35, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(100,160,255,0.25);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .result-card.visible { display: block; }
+
+  .result-video {
+    width: 100%;
+    display: block;
+    max-height: 360px;
+    object-fit: contain;
+    background: #000;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--action);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--action-hover); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { color: var(--blue); border-color: rgba(100,160,255,0.4); }
+
+  /* ── ERREUR ── */
+  .error-card {
+    display: none;
+    background: rgba(30, 8, 8, 0.8);
+    border: 1px solid rgba(200, 60, 60, 0.3);
+    border-radius: 14px;
+    padding: 16px 18px;
+    font-size: 0.85em;
+    color: #cc7777;
+    line-height: 1.6;
+  }
+  .error-card.visible { display: block; }
+
+  /* ── NOUVELLE CRÉATION ── */
+  .new-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.88em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+  .new-btn.visible { display: block; }
+  .new-btn:hover { border-color: rgba(100,160,255,0.4); color: var(--blue); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html" class="back-btn">←</a>
+  <a href="index.html" class="logo">Easy<span>AI</span></a>
+  <div class="header-right">
+    <a href="history.html" class="history-btn">📁 Mes vidéos</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Miniature shimmer -->
+  <div class="preview-wrap" id="previewWrap">
+    <img class="preview-img" id="previewImg" src="" alt="">
+    <div class="preview-overlay"></div>
+    <div class="shimmer-bar"></div>
+    <div class="preview-status" id="previewStatus">
+      <div class="status-dot"></div>
+      <span id="statusText">Initialisation...</span>
+    </div>
+  </div>
+
+  <!-- Chrono + étape -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Durée</div>
+      <div class="stat-value blue" id="chronoEl">0:00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Statut</div>
+      <div class="stat-value" id="statusEl" style="font-size:1em;padding-top:4px;">En attente</div>
+    </div>
+  </div>
+
+  <!-- Jauge -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <span class="progress-label" id="progressLabel">Envoi à RunPod...</span>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-card">
+    <div class="log-title">Journal</div>
+    <div class="log-entries" id="logEntries"></div>
+  </div>
+
+  <!-- Résultat -->
+  <div class="result-card" id="resultCard">
+    <video class="result-video" id="resultVideo" controls playsinline></video>
+    <div class="result-actions">
+      <button class="btn btn-primary" id="downloadBtn" onclick="downloadVideo()">📥 Télécharger</button>
+      <button class="btn btn-outline" onclick="shareVideo()">↑ Partager</button>
+    </div>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-card" id="errorCard"></div>
+
+  <!-- Nouvelle création -->
+  <button class="new-btn" id="newBtn" onclick="location.href='index.html'">
+    ✦ Créer une nouvelle vidéo
+  </button>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════
+const BACKEND_URL = 'https://wan22-backend.fly.dev';
+
+// ══════════════════════════════════════════
+//  ÉTAT (depuis localStorage)
+// ══════════════════════════════════════════
+const apiToken    = localStorage.getItem('easyai_token') || '';
+const jobId       = localStorage.getItem('easyai_job_id') || '';
+const imageData   = localStorage.getItem('easyai_image') || '';   // base64
+const promptFr    = localStorage.getItem('easyai_prompt') || '';
+const workflowType = localStorage.getItem('easyai_workflow') || 'anim';
+
+if (!apiToken) { location.href = 'index.html'; }
+
+// ══════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════
+let chronoInterval = null;
+let startTime = Date.now();
+let currentJobId = jobId;
+let done = false;
+
+// Afficher l'image source
+if (imageData) {
+  document.getElementById('previewImg').src = imageData;
+}
+
+// Chronomètre
+function startChrono() {
+  startTime = Date.now();
+  chronoInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    document.getElementById('chronoEl').textContent =
+      `${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+function stopChrono() {
+  if (chronoInterval) clearInterval(chronoInterval);
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function setStatus(text) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusEl').textContent = text;
+}
+
+function addLog(msg, type = '') {
+  const entries = document.getElementById('logEntries');
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  const time = `${m}:${s.toString().padStart(2,'0')}`;
+
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-time">[${time}]</span><span class="log-msg ${type}">${msg}</span>`;
+  entries.appendChild(el);
+  entries.scrollTop = entries.scrollHeight;
+}
+
+function showError(msg) {
+  stopChrono();
+  done = true;
+  setStatus('Erreur');
+  const card = document.getElementById('errorCard');
+  card.textContent = '⚠️ ' + msg;
+  card.classList.add('visible');
+  document.getElementById('newBtn').classList.add('visible');
+  addLog(msg, 'err');
+}
+
+function showResult(videoUrl) {
+  stopChrono();
+  done = true;
+  setProgress(100, 'Génération terminée ✓');
+  setStatus('Terminé !');
+
+  // Enlever le shimmer sur la miniature
+  document.getElementById('previewWrap').classList.add('done');
+  document.getElementById('previewStatus').style.display = 'none';
+
+  // Afficher la vidéo
+  const video = document.getElementById('resultVideo');
+  video.src = videoUrl;
+  document.getElementById('resultCard').classList.add('visible');
+  document.getElementById('newBtn').classList.add('visible');
+
+  // Stocker pour le téléchargement
+  window._videoUrl = videoUrl;
+
+  addLog('Vidéo prête !', 'ok');
+
+  // Nettoyer localStorage
+  localStorage.removeItem('easyai_job_id');
+}
+
+// ══════════════════════════════════════════
+//  POLLING
+// ══════════════════════════════════════════
+async function pollStatus(jobId) {
+  const maxAttempts = 300;
+  let attempts = 0;
+
+  while (attempts < maxAttempts && !done) {
+    await sleep(3000);
+    attempts++;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/status/${jobId}`, {
+        headers: { 'X-Api-Token': apiToken }
+      });
+      const data = await res.json();
+      const status = data.status;
+
+      if (status === 'IN_QUEUE') {
+        setProgress(10, 'En attente dans la file RunPod...');
+        setStatus('File d\'attente');
+        if (attempts === 1) addLog('Job en attente dans la file RunPod', 'info');
+
+      } else if (status === 'IN_PROGRESS') {
+        const pct = Math.min(15 + attempts * 2, 88);
+        setProgress(pct, 'WanVideo génère ta vidéo...');
+        setStatus('Génération');
+        if (attempts === 2) addLog('Génération WanVideo démarrée', 'info');
+
+      } else if (status === 'COMPLETED') {
+        addLog('Job terminé, récupération vidéo...', 'info');
+        const output = data.output;
+        const videoUrl = output?.download_url || output?.video_urls?.[0];
+
+        if (videoUrl) {
+          await saveGeneration(jobId, videoUrl);
+          showResult(videoUrl);
+        } else {
+          showError('Génération terminée mais aucune vidéo trouvée.');
+        }
+        return;
+
+      } else if (status === 'FAILED' || status === 'CANCELLED') {
+        showError(`Job ${status} : ${data.error || 'erreur inconnue'}`);
+        return;
+      }
+
+    } catch(e) {
+      addLog(`Erreur polling: ${e.message}`, 'err');
+    }
+  }
+
+  showError('Timeout — génération trop longue.');
+}
+
+async function saveGeneration(jobId, videoUrl) {
+  try {
+    await fetch(`${BACKEND_URL}/generations/save?job_id=${encodeURIComponent(jobId)}&video_url=${encodeURIComponent(videoUrl)}&user_prompt=${encodeURIComponent(promptFr)}`, {
+      method: 'POST',
+      headers: { 'X-Api-Token': apiToken }
+    });
+    addLog('Sauvegardé dans l\'historique', 'ok');
+  } catch(e) {
+    console.warn('Save failed:', e);
+  }
+}
+
+// ══════════════════════════════════════════
+//  TÉLÉCHARGEMENT
+// ══════════════════════════════════════════
+async function downloadVideo() {
+  const videoUrl = window._videoUrl;
+  if (!videoUrl || !currentJobId) return;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const dlUrl = `${BACKEND_URL}/download/${currentJobId}?token=${encodeURIComponent(apiToken)}`;
+
+  if (isIOS && navigator.share) {
+    try { await navigator.share({ title: 'Ma vidéo EasyAI', url: dlUrl }); return; }
+    catch(e) { if (e.name === 'AbortError') return; }
+  }
+  if (isIOS) {
+    addLog('iOS : Fichiers → appui long → Enregistrer la vidéo');
+    window.location.href = dlUrl;
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = dlUrl;
+  a.download = `easyai_${currentJobId.slice(0,8)}.mp4`;
+  a.click();
+}
+
+async function shareVideo() {
+  const videoUrl = window._videoUrl;
+  if (!videoUrl) return;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Ma vidéo EasyAI', url: videoUrl }); }
+    catch(e) { if (e.name !== 'AbortError') window.open(videoUrl, '_blank'); }
+  } else {
+    window.open(videoUrl, '_blank');
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+if (!currentJobId) {
+  showError('Aucun job en cours. Retourne sur le chat pour lancer une génération.');
+} else {
+  addLog(`Job démarré : ${currentJobId}`, 'info');
+  addLog(`Workflow : ${workflowType}`, 'info');
+  if (promptFr) addLog(`"${promptFr.slice(0,60)}..."`, '');
+  startChrono();
+  setProgress(5, 'Connexion à RunPod...');
+  setStatus('Démarrage');
+  pollStatus(currentJobId);
+}
+</script>
+</body>
+</html>

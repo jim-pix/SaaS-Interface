@@ -951,10 +951,23 @@ if (apiToken) {
 // ── Vidéos récentes sur la landing ────────────────────────────────────────
 function updateNavGenerating() {
   const jobId = localStorage.getItem('easyai_job_id');
-  const btns = document.querySelectorAll('#navGenerating, #navGenerating2');
-  btns.forEach(btn => {
-    if (btn) btn.classList.toggle('nav-hidden', !jobId);
-  });
+  if (!jobId) {
+    document.querySelectorAll('#navGenerating, #navGenerating2').forEach(b => b && b.classList.add('nav-hidden'));
+    return;
+  }
+  // Vérifier si le job est encore actif sur RunPod
+  fetch(`${BACKEND_URL}/status/${jobId}`, { headers: { 'X-Api-Token': apiToken } })
+    .then(r => r.json())
+    .then(data => {
+      const active = ['IN_QUEUE','IN_PROGRESS'].includes(data.status);
+      if (!active) localStorage.removeItem('easyai_job_id');
+      document.querySelectorAll('#navGenerating, #navGenerating2').forEach(b => {
+        if (b) b.classList.toggle('nav-hidden', !active);
+      });
+    })
+    .catch(() => {
+      document.querySelectorAll('#navGenerating, #navGenerating2').forEach(b => b && b.classList.add('nav-hidden'));
+    });
 }
 
 async function loadRecentVideos() {

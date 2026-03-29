@@ -1608,8 +1608,15 @@ async function startGeneration() {
     localStorage.setItem('easyai_prompt',   finalPrompt);
     localStorage.setItem('easyai_workflow', workflow || 'anim');
 
-    // Rediriger vers la page de génération
-    location.href = 'generation.html';
+    // Rediriger — window.location.replace fonctionne mieux sur iOS Safari
+    window.location.replace('generation.html');
+    // Bouton de secours si la redirection est bloquée (iOS)
+    setTimeout(() => {
+      if (document.getElementById('chatPage').style.display !== 'none') {
+        pw.classList.remove('visible');
+        addAIMessage(`✅ Job lancé ! <a href="generation.html" style="color:var(--blue);font-weight:700;">→ Voir la génération</a>`);
+      }
+    }, 1500);
 
   } catch(e) {
     console.error('❌ Erreur génération :', e);

@@ -1028,40 +1028,19 @@ let techParams = {
 // ══════════════════════════════════════════
 //  UPLOAD ACCUEIL
 // ══════════════════════════════════════════
-function resizeAndConvert(file, callback, maxSize = 1280, quality = 0.85) {
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      // Calculer les dimensions en gardant le ratio
-      let w = img.width, h = img.height;
-      if (w > maxSize || h > maxSize) {
-        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-        else       { w = Math.round(w * maxSize / h); h = maxSize; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const jpeg = canvas.toDataURL('image/jpeg', quality);
-      console.log(`🖼️ Image convertie: ${img.width}x${img.height} → ${w}x${h} JPEG`);
-      callback(jpeg);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
 function handleWelcomeUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
-  resizeAndConvert(file, jpeg => {
-    imageBase64 = jpeg;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64 = ev.target.result;
     const prev = document.getElementById('welcomePreview');
     prev.src = imageBase64;
     prev.style.display = 'block';
     document.getElementById('welcomeLabel').style.display = 'none';
     setTimeout(() => enterChat(), 400);
-  });
+  };
+  reader.readAsDataURL(file);
 }
 
 function enterChat() {
@@ -1071,20 +1050,8 @@ function enterChat() {
   cp.style.flexDirection = 'column';
 
   const thumb = document.getElementById('headerThumb');
-  // Miniature légère — on prend les 200 premiers px via canvas
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 72; canvas.height = 72;
-    const ctx = canvas.getContext('2d');
-    const size = Math.min(img.width, img.height);
-    const sx = (img.width - size) / 2;
-    const sy = (img.height - size) / 2;
-    ctx.drawImage(img, sx, sy, size, size, 0, 0, 72, 72);
-    thumb.src = canvas.toDataURL('image/jpeg', 0.7);
-    thumb.style.display = 'block';
-  };
-  img.src = imageBase64;
+  thumb.src = imageBase64;
+  thumb.style.display = 'block';
 
   document.getElementById('chatMessages').innerHTML = '';
   hideAll();
@@ -1342,16 +1309,19 @@ async function onVisionConfirmed() {
 function handleImage2(e) {
   const file = e.target.files[0];
   if (!file) return;
-  resizeAndConvert(file, jpeg => {
-    imageBase64_2 = jpeg;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64_2 = ev.target.result;
     const prev = document.getElementById('preview2');
     prev.src = imageBase64_2;
     prev.style.display = 'block';
-    document.getElementById('uploadZone2').querySelector('.upload-zone-chat-label').style.display = 'none';
+    const label = document.getElementById('uploadZone2').querySelector('.upload-zone-chat-label');
+    if (label) label.style.display = 'none';
     addUserImageBubble(imageBase64_2);
     hideAll();
     setTimeout(() => startClarification(), 400);
-  });
+  };
+  reader.readAsDataURL(file);
 }
 
 // ══════════════════════════════════════════

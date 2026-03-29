@@ -324,11 +324,18 @@ const apiToken    = localStorage.getItem('easyai_token') || '';
 
 if (!apiToken) { location.href = 'index.html'; }
 
-// Afficher "En cours" si job actif
+// Afficher "En cours" uniquement si job encore actif sur RunPod
 const activeJobId = localStorage.getItem('easyai_job_id');
 if (activeJobId) {
-  const btn = document.getElementById('navGenerating');
-  if (btn) btn.classList.remove('nav-hidden');
+  fetch(`${BACKEND_URL}/status/${activeJobId}`, { headers: { 'X-Api-Token': apiToken } })
+    .then(r => r.json())
+    .then(data => {
+      const active = ['IN_QUEUE','IN_PROGRESS'].includes(data.status);
+      if (!active) localStorage.removeItem('easyai_job_id');
+      const btn = document.getElementById('navGenerating');
+      if (btn && active) btn.classList.remove('nav-hidden');
+    })
+    .catch(() => {});
 }
 
 let currentPage   = 1;

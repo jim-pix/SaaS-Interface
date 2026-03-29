@@ -61,6 +61,62 @@
     pointer-events: none;
   }
 
+  /* Vidéos récentes landing */
+  .recent-videos {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .recent-title {
+    font-size: 0.68em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .recent-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .recent-card {
+    position: relative;
+    aspect-ratio: 16/9;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(10,20,40,0.5);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .recent-card:hover { border-color: rgba(100,160,255,0.4); }
+
+  .recent-card video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .recent-card .play-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    background: rgba(5,10,25,0.3);
+    transition: opacity 0.2s;
+  }
+  .recent-card:hover .play-icon { opacity: 0; }
+
   .logo {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
@@ -633,6 +689,15 @@
     </div>
     <img id="welcomePreview" alt="">
   </div>
+
+  <!-- Vidéos récentes -->
+  <div class="recent-videos" id="recentVideos" style="display:none">
+    <div class="recent-title">Tes dernières créations</div>
+    <div class="recent-grid" id="recentGrid"></div>
+    <a href="history.html" style="text-align:center;font-size:0.75em;color:var(--muted);text-decoration:none;font-family:'Syne',sans-serif;">
+      Voir tout l'historique →
+    </a>
+  </div>
 </div>
 
 <!-- ══ CHAT PAGE ══ -->
@@ -763,6 +828,7 @@ function doLogin() {
     localStorage.setItem('easyai_token', token);
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('welcomeScreen').style.display = 'flex';
+    loadRecentVideos();
   })
   .catch(() => {
     document.getElementById('loginError').textContent = 'Token invalide — vérifie et réessaie.';
@@ -798,12 +864,45 @@ if (apiToken) {
       });
     } else {
       document.getElementById('welcomeScreen').style.display = 'flex';
+      loadRecentVideos();
     }
   })
   .catch(() => {
     localStorage.removeItem('easyai_token');
     apiToken = '';
   });
+}
+
+// ── Vidéos récentes sur la landing ────────────────────────────────────────
+async function loadRecentVideos() {
+  if (!apiToken) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/my-generations?page=1`, {
+      headers: { 'X-Api-Token': apiToken }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const generations = data.items || data.generations || [];
+    const recent = generations.filter(g => g.video_url).slice(0, 3);
+    if (!recent.length) return;
+
+    const grid = document.getElementById('recentGrid');
+    grid.innerHTML = '';
+    recent.forEach(gen => {
+      const card = document.createElement('div');
+      card.className = 'recent-card';
+      card.innerHTML = `
+        <video src="${gen.video_url}" muted loop playsinline
+          onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        </video>
+        <div class="play-icon">▶</div>`;
+      card.onclick = () => window.open(gen.video_url, '_blank');
+      grid.appendChild(card);
+    });
+    document.getElementById('recentVideos').style.display = 'flex';
+  } catch(e) {
+    console.warn('Recent videos load failed:', e);
+  }
 }
 
 // ══════════════════════════════════════════

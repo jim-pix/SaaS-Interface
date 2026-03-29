@@ -1520,6 +1520,25 @@ async function startGeneration() {
   phase = 'generate';
   setBadge('Génération');
 
+  // Compression des images avant envoi (HEIC iPhone → JPEG 1280px)
+  const compressImage = (dataUrl, maxSize=1280) => new Promise(resolve => {
+    if (!dataUrl) return resolve(null);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => resolve(dataUrl.split(',')[1]); // fallback sans compression
+    img.src = dataUrl;
+  });
+
   // Résolution des paramètres techniques
   const sizeScaleMap = { half: 32, full: 65, hd: 100 };
   const sizeScale   = sizeScaleMap[techParams.resolution] || 65;
@@ -1541,8 +1560,8 @@ async function startGeneration() {
   const payload = {
     user_prompt:       finalPromptEN || finalPrompt,
     negative_prompt:   finalNegative || '',
-    image_base64:      imageBase64    ? imageBase64.split(',')[1]    : null,
-    last_frame_base64: imageBase64_2  ? imageBase64_2.split(',')[1]  : null,
+    image_base64:      await compressImage(imageBase64),
+    last_frame_base64: await compressImage(imageBase64_2),
     workflow_name:     workflowName,
     workflow_type:     1,
     video_format:      videoFormat,

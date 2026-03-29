@@ -398,7 +398,24 @@
   }
   .error-card.visible { display: block; }
 
-  /* ── NOUVELLE CRÉATION ── */
+  /* ── CANCEL BTN ── */
+  .cancel-btn {
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    border: 1px solid rgba(200,60,60,0.3);
+    border-radius: 12px;
+    color: #cc7777;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+    margin-top: 8px;
+  }
+  .cancel-btn.visible { display: block; }
+  .cancel-btn:hover { background: rgba(200,60,60,0.1); border-color: rgba(200,60,60,0.5); }
   .new-btn {
     width: 100%;
     padding: 14px;
@@ -480,6 +497,16 @@
 
   <!-- Erreur -->
   <div class="error-card" id="errorCard"></div>
+
+  <!-- Bouton Cancel -->
+  <button class="cancel-btn" id="cancelBtn" onclick="cancelJob()">
+    ✕ Annuler la génération
+  </button>
+
+  <!-- Bouton Retry -->
+  <button class="new-btn" id="retryBtn" style="display:none;border-color:rgba(100,160,255,0.3);color:var(--blue);" onclick="retryJob()">
+    ↺ Relancer à l'identique
+  </button>
 
   <!-- Nouvelle création -->
   <button class="new-btn" id="newBtn" onclick="location.href='index.html'">
@@ -566,6 +593,8 @@ function showError(msg) {
   const card = document.getElementById('errorCard');
   card.textContent = '⚠️ ' + msg;
   card.classList.add('visible');
+  document.getElementById('cancelBtn').classList.remove('visible');
+  document.getElementById('retryBtn').style.display = 'block';
   document.getElementById('newBtn').classList.add('visible');
   addLog(msg, 'err');
 }
@@ -575,6 +604,7 @@ function showResult(videoUrl) {
   done = true;
   setProgress(100, 'Génération terminée ✓');
   setStatus('Terminé !');
+  document.getElementById('cancelBtn').classList.remove('visible');
 
   // Enlever le shimmer sur la miniature
   document.getElementById('previewWrap').classList.add('done');
@@ -698,6 +728,38 @@ async function shareVideo() {
   }
 }
 
+async function cancelJob() {
+  if (!currentJobId) return;
+  if (!confirm('Annuler la génération en cours ?')) return;
+
+  try {
+    await fetch(`${BACKEND_URL}/cancel/${currentJobId}`, {
+      method: 'POST',
+      headers: { 'X-Api-Token': apiToken }
+    });
+    addLog('Génération annulée', 'err');
+  } catch(e) {
+    addLog('Erreur annulation : ' + e.message, 'err');
+  }
+
+  done = true;
+  stopChrono();
+  document.getElementById('cancelBtn').classList.remove('visible');
+  document.getElementById('progressWrap').style.display = 'none';
+  showError('Génération annulée par l\'utilisateur.');
+  document.getElementById('retryBtn').style.display = 'block';
+  localStorage.removeItem('easyai_job_id');
+}
+
+function retryJob() {
+  // Remet le même job_id dans localStorage et recharge la page
+  // Le payload original est perdu — on redirige vers le chat
+  if (confirm('Les paramètres seront rechargés depuis le chat. Continuer ?')) {
+    localStorage.removeItem('easyai_job_id');
+    location.href = 'index.html';
+  }
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ══════════════════════════════════════════
@@ -712,6 +774,7 @@ if (!currentJobId) {
   startChrono();
   setProgress(5, 'Connexion à RunPod...');
   setStatus('Démarrage');
+  document.getElementById('cancelBtn').classList.add('visible');
   pollStatus(currentJobId);
 }
 </script>

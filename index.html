@@ -1596,6 +1596,12 @@ function restartFromDescription() {
 //  GÉNÉRATION
 // ══════════════════════════════════════════
 async function startGeneration() {
+  // Vérification segments pour video_longue
+  if (workflow === 'video_longue' && !videoLongueSegments) {
+    addAIMessage('⚠️ Le plan de segments n\'a pas pu être généré. Réessaie en redécrivant ton action.');
+    return;
+  }
+
   hideAll();
   phase = 'generate';
   setBadge('Génération');

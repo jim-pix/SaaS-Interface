@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyAI — Food DA</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a08; --surface: #111110; --border: #222220;
+    --accent: #c8a96e; --accent-dim: #7a6440;
+    --text: #e8e4dc; --text-dim: #6b6760; --text-mid: #a09a90;
+    --green: #6a9e6f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; display:flex; flex-direction:column; }
+  header { padding:16px 32px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+  .logo { font-family:'Playfair Display',serif; font-size:18px; color:var(--accent); }
+  .logo span { color:var(--text-dim); font-style:italic; font-size:13px; margin-left:8px; }
+  .badge { background:rgba(200,169,110,0.08); border:1px solid var(--accent-dim); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; padding:4px 10px; letter-spacing:0.1em; text-transform:uppercase; }
+  .api-zone { margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .api-input { background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:6px 12px; outline:none; width:300px; }
+  .api-input::placeholder { color:var(--text-dim); }
+  .api-input:focus { border-color:var(--accent-dim); }
+  .api-dot { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); }
+  .api-dot.on { color:var(--green); }
+  .layout { display:grid; grid-template-columns:340px 1fr; flex:1; }
+  .left { border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px; gap:20px; overflow-y:auto; }
+  .lbl { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+  .drop { border:1px dashed var(--border); background:var(--surface); aspect-ratio:4/3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:border-color 0.2s; }
+  .drop:hover { border-color:var(--accent-dim); }
+  .drop.filled { border-style:solid; border-color:var(--accent-dim); }
+  .drop img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.85; }
+  .drop-ov { position:absolute; inset:0; background:linear-gradient(to top,rgba(10,10,8,.7) 0%,transparent 50%); }
+  .drop-ico { font-size:28px; opacity:0.3; }
+  .drop-txt { font-size:12px; color:var(--text-dim); text-align:center; }
+  #fi { display:none; }
+  textarea.ctx { background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:300; padding:12px 14px; resize:none; width:100%; outline:none; line-height:1.6; }
+  textarea.ctx::placeholder { color:var(--text-dim); }
+  textarea.ctx:focus { border-color:var(--accent-dim); }
+  .go-btn { background:var(--accent); color:#0a0a08; border:none; padding:14px 20px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.2s; }
+  .go-btn:hover { opacity:0.85; }
+  .go-btn:disabled { opacity:0.3; cursor:not-allowed; }
+  .brief-box { background:var(--surface); border:1px solid var(--border); padding:16px; display:none; flex-direction:column; gap:12px; }
+  .brief-box.on { display:flex; }
+  .brow { display:flex; flex-direction:column; gap:4px; }
+  .bkey { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-dim); }
+  .bval { font-size:12px; color:var(--text-mid); line-height:1.5; }
+  .bval.hl { color:var(--text); font-style:italic; font-family:'Playfair Display',serif; font-size:14px; }
+  .val-btn { background:transparent; border:1px solid var(--green); color:var(--green); padding:10px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+  .val-btn:hover { background:rgba(106,158,111,0.1); }
+  .right { display:flex; flex-direction:column; height:calc(100vh - 61px); }
+  .chat { flex:1; overflow-y:auto; padding:28px 36px; display:flex; flex-direction:column; gap:20px; scroll-behavior:smooth; }
+  .chat::-webkit-scrollbar { width:4px; }
+  .chat::-webkit-scrollbar-thumb { background:var(--border); }
+  .msg { display:flex; flex-direction:column; gap:4px; max-width:760px; animation:fu 0.3s ease forwards; opacity:0; }
+  @keyframes fu { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+  .msg.u { align-self:flex-end; align-items:flex-end; }
+  .msg.a { align-self:flex-start; align-items:flex-start; width:100%; }
+  .mmeta { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+  .msg.a .mmeta { color:var(--accent-dim); }
+  .mbub { padding:14px 18px; line-height:1.7; font-size:13.5px; }
+  .msg.u .mbub { background:#1a1a17; border:1px solid var(--border); color:var(--text-mid); max-width:480px; }
+  .msg.a .mbub { background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.15); border-left:3px solid var(--accent); color:var(--text); width:100%; }
+  .mbub h3 { font-family:'Playfair Display',serif; font-size:17px; font-weight:400; color:var(--accent); margin-bottom:12px; font-style:italic; }
+  .cs { margin-bottom:14px; }
+  .ct { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-dim); margin-bottom:4px; }
+  .cb { color:var(--text-mid); font-size:13px; line-height:1.6; }
+  .fxlist { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .fxt { background:rgba(200,169,110,0.08); border:1px solid var(--accent-dim); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; padding:3px 10px; }
+  .typing { display:none; align-items:center; gap:5px; padding:14px 18px; background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.15); border-left:3px solid var(--accent); width:fit-content; margin:0 36px; }
+  .typing.on { display:flex; }
+  .dot { width:5px; height:5px; background:var(--accent); border-radius:50%; animation:p 1.2s infinite; }
+  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+  @keyframes p{0%,60%,100%{opacity:.2;transform:scale(1)}30%{opacity:1;transform:scale(1.3)}}
+  .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; opacity:0.25; }
+  .empty-ico { font-size:48px; }
+  .empty-txt { font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--text-dim); }
+  .izone { border-top:1px solid var(--border); padding:16px 24px; display:flex; gap:10px; align-items:flex-end; }
+  textarea.ci { flex:1; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:300; padding:12px 14px; resize:none; outline:none; line-height:1.5; max-height:120px; }
+  textarea.ci::placeholder { color:var(--text-dim); }
+  textarea.ci:focus { border-color:var(--accent-dim); }
+  .sbtn { background:var(--surface); border:1px solid var(--accent-dim); color:var(--accent); width:44px; height:44px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .sbtn:hover { background:rgba(200,169,110,0.1); }
+  .sbtn:disabled { opacity:0.3; cursor:not-allowed; }
+  .vbanner { display:none; background:rgba(106,158,111,0.08); border-top:1px solid rgba(106,158,111,0.3); padding:10px 24px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--green); text-align:center; }
+  .vbanner.on { display:block; }
+  * { scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">EasyAI <span>Food Module</span></div>
+  <div class="badge">DA · Gemini 2.5 Flash</div>
+  <div class="api-zone">
+    <input class="api-input" type="password" id="apiKey" placeholder="Gemini API key (AIza…)" oninput="onKey()">
+    <span class="api-dot" id="apiDot">● no key</span>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="left">
+    <div>
+      <div class="lbl">Produit</div>
+      <div class="drop" id="dz" onclick="document.getElementById('fi').click()">
+        <div class="drop-ico">📸</div>
+        <div class="drop-txt">Glisser une photo<br>ou cliquer pour choisir</div>
+      </div>
+      <input type="file" id="fi" accept="image/*">
+    </div>
+    <div>
+      <div class="lbl">Contexte <span style="opacity:.4">(optionnel)</span></div>
+      <textarea class="ctx" id="ctx" rows="3" placeholder="Ex: burger premium, cible 25-35 ans, ambiance urbaine…"></textarea>
+    </div>
+    <button class="go-btn" id="goBtn" disabled onclick="launch()">✦ Briefer le DA</button>
+    <div class="brief-box" id="briefBox">
+      <div class="lbl">Brief en cours</div>
+      <div id="briefRows"></div>
+      <button class="val-btn" id="valBtn" onclick="validate()">✓ Valider ce brief</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="chat" id="chat">
+      <div class="empty" id="empty">
+        <div class="empty-ico">✦</div>
+        <div class="empty-txt">Le DA attend votre produit</div>
+      </div>
+    </div>
+    <div class="typing" id="typing">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="vbanner" id="vbanner">✓ Brief validé — prêt pour la génération</div>
+    <div class="izone">
+      <textarea class="ci" id="ci" rows="1" placeholder="Réagir au brief, demander des ajustements…" onkeydown="hk(event)" oninput="ar(this)"></textarea>
+      <button class="sbtn" id="sbtn" onclick="send()" disabled>→</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var hist = [];
+var brief = null;
+var img64 = null;
+var imgMime = 'image/jpeg';
+var busy = false;
+
+var SYS = 'Tu es un Directeur Artistique (DA) senior specialise en publicite food et gastronomie pour EasyAI, une plateforme de generation video IA. Ton role : analyser un produit alimentaire et proposer un brief creatif pub complet comme une agence haut de gamme. Reponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans backticks, sans texte avant ou apres. Format exact : {"concept":"titre creatif percutant","style":"nom du style visuel","ambiance":"description ambiance","eclairage":"type eclairage precis","plan":"type de plan et angle","mouvement":"mouvement camera ou sujet","palette":"couleurs dominantes hex + description","fx_montage":["effet 1","effet 2","effet 3","effet 4"],"prompt_flux":"prompt Flux complet pour background et scene","prompt_wan":"prompt WAN I2V optimise","justification":"pourquoi ces choix pour CE produit"}. Sois creatif, audacieux, precis. Pense pub Cannes Lions. Pour les ajustements, renvoie le JSON complet mis a jour.';
+
+function onKey() {
+  var v = document.getElementById('apiKey').value;
+  var d = document.getElementById('apiDot');
+  if (v.length > 8) { d.textContent = '● ready'; d.className = 'api-dot on'; }
+  else { d.textContent = '● no key'; d.className = 'api-dot'; }
+}
+
+document.getElementById('fi').addEventListener('change', function(e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  imgMime = f.type || 'image/jpeg';
+  var r = new FileReader();
+  r.onload = function(ev) {
+    img64 = ev.target.result.split(',')[1];
+    var dz = document.getElementById('dz');
+    dz.className = 'drop filled';
+    dz.innerHTML = '<img src="' + ev.target.result + '"><div class="drop-ov"></div>';
+    document.getElementById('goBtn').disabled = false;
+  };
+  r.readAsDataURL(f);
+});
+
+var dz = document.getElementById('dz');
+dz.addEventListener('dragover', function(e) { e.preventDefault(); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    document.getElementById('fi').files = e.dataTransfer.files;
+    document.getElementById('fi').dispatchEvent(new Event('change'));
+  }
+});
+
+function launch() {
+  if (!img64 || busy) return;
+  var ctx = document.getElementById('ctx').value.trim();
+  var em = document.getElementById('empty');
+  if (em) em.remove();
+  var txt = ctx ? 'Voici mon produit. Contexte : ' + ctx : 'Voici mon produit. Propose ton brief creatif.';
+  addMsg('u', txt);
+  hist = [{ role: 'user', parts: [{ inline_data: { mime_type: imgMime, data: img64 } }, { text: txt }] }];
+  call();
+}
+
+function send() {
+  var ci = document.getElementById('ci');
+  var t = ci.value.trim();
+  if (!t || busy) return;
+  ci.value = ''; ci.style.height = 'auto';
+  addMsg('u', t);
+  hist.push({ role: 'user', parts: [{ text: t }] });
+  call();
+}
+
+function call() {
+  var key = document.getElementById('apiKey').value.trim();
+  if (!key) { addMsg('a', 'Renseigne ta cle Gemini API dans le champ en haut.'); return; }
+  setbusy(true);
+
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYS }] },
+      contents: hist,
+      generationConfig: { temperature: 1.0, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.error) { addMsg('a', 'Erreur Gemini : ' + d.error.message); setbusy(false); return; }
+    var raw = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0] ? d.candidates[0].content.parts[0].text : '';
+    var b = null;
+    try { b = JSON.parse(raw); } catch(e) {
+      var m = raw.match(/\{[\s\S]*\}/);
+      if (m) try { b = JSON.parse(m[0]); } catch(e2) {}
+    }
+    if (b) {
+      brief = b;
+      addBrief(b);
+      updateBox(b);
+      hist.push({ role: 'model', parts: [{ text: raw }] });
+      document.getElementById('sbtn').disabled = false;
+    } else {
+      addMsg('a', raw || 'Reponse inattendue.');
+    }
+    setbusy(false);
+  })
+  .catch(function(e) { addMsg('a', 'Erreur : ' + e.message); setbusy(false); });
+}
+
+function addBrief(b) {
+  var chat = document.getElementById('chat');
+  var div = document.createElement('div');
+  div.className = 'msg a';
+  var fx = '';
+  if (b.fx_montage && Array.isArray(b.fx_montage)) b.fx_montage.forEach(function(f) { fx += '<span class="fxt">' + f + '</span>'; });
+  var mono = 'font-family:\'DM Mono\',monospace;font-size:11px;opacity:.7;word-break:break-word;';
+  div.innerHTML = '<div class="mmeta">DA ✦ ' + ts() + '</div><div class="mbub">' +
+    '<h3>' + (b.concept||'Concept') + '</h3>' +
+    cs('Style & Ambiance', '<strong style="color:var(--text)">' + (b.style||'') + '</strong> — ' + (b.ambiance||'')) +
+    cs('Eclairage', b.eclairage||'') +
+    cs('Plan & Mouvement', (b.plan||'') + ' · ' + (b.mouvement||'')) +
+    cs('Palette', b.palette||'') +
+    (fx ? '<div class="cs"><div class="ct">FX Montage</div><div class="fxlist">' + fx + '</div></div>' : '') +
+    cs('Prompt Flux', '<span style="' + mono + '">' + (b.prompt_flux||'') + '</span>') +
+    cs('Prompt WAN I2V', '<span style="' + mono + '">' + (b.prompt_wan||'') + '</span>') +
+    '<div class="cs" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px"><div class="ct">Pourquoi ces choix</div><div class="cb" style="font-style:italic">' + (b.justification||'') + '</div></div>' +
+    '</div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function cs(t, body) { return '<div class="cs"><div class="ct">' + t + '</div><div class="cb">' + body + '</div></div>'; }
+
+function addMsg(type, txt) {
+  var chat = document.getElementById('chat');
+  var div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.innerHTML = type === 'u'
+    ? '<div class="mmeta">Vous</div><div class="mbub">' + txt + '</div>'
+    : '<div class="mmeta">DA ✦ ' + ts() + '</div><div class="mbub">' + txt + '</div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function updateBox(b) {
+  document.getElementById('briefRows').innerHTML =
+    br('Concept', b.concept||'', true) +
+    br('Style', b.style||'') +
+    br('Plan', b.plan||'') +
+    br('Mouvement', b.mouvement||'');
+  document.getElementById('briefBox').classList.add('on');
+}
+
+function br(k, v, hl) { return '<div class="brow"><div class="bkey">' + k + '</div><div class="bval' + (hl?' hl':'') + '">' + v + '</div></div>'; }
+
+function validate() {
+  if (!brief) return;
+  document.getElementById('vbanner').classList.add('on');
+  var btn = document.getElementById('valBtn');
+  btn.textContent = '✓ Valide'; btn.disabled = true; btn.style.opacity = '.5';
+  console.log('=== BRIEF VALIDE ===\n' + JSON.stringify(brief, null, 2));
+}
+
+function setbusy(s) {
+  busy = s;
+  var t = document.getElementById('typing');
+  if (s) t.classList.add('on'); else t.classList.remove('on');
+  document.getElementById('goBtn').disabled = s || !img64;
+  document.getElementById('sbtn').disabled = s;
+  if (s) { var c = document.getElementById('chat'); c.scrollTop = c.scrollHeight; }
+}
+
+function hk(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function ts() { return new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}); }
+</script>
+</body>
+</html>

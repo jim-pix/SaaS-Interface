@@ -1440,13 +1440,21 @@ function disableChoices(container) {
 // ══════════════════════════════════════════
 async function callVideoLonguePlan(imageBase64, vision) {
   try {
+    // Envoyer le base64 complet (avec ou sans header data:image/...)
+    const imgData = imageBase64 || '';
     const res = await fetch(`${BACKEND_URL}/chat/video-longue-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': apiToken },
-      body: JSON.stringify({ image_base64: imageBase64.split(',')[1], vision })
+      body: JSON.stringify({ 
+        image_base64: imgData,
+        vision: vision || userVision || 'Créer une animation de cette image'
+      })
     });
     if (res.status === 429) { handle429(); return null; }
-    if (!res.ok) throw new Error('Erreur backend');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Erreur backend');
+    }
     return await res.json();
   } catch(e) {
     removeAPILoader();

@@ -829,13 +829,16 @@
         </div>
 
         <!-- Durée -->
-        <div class="param-group">
+        <div class="param-group" id="durationGroup">
           <div class="param-label">Durée</div>
-          <div class="param-options">
+          <div class="param-options" id="durationOptions">
             <button class="param-btn" data-group="duration" data-value="33" onclick="selectParam(this,'duration')">2s</button>
             <button class="param-btn active" data-group="duration" data-value="49" onclick="selectParam(this,'duration')">3s</button>
             <button class="param-btn" data-group="duration" data-value="65" onclick="selectParam(this,'duration')">4s</button>
             <button class="param-btn" data-group="duration" data-value="81" onclick="selectParam(this,'duration')">5s</button>
+          </div>
+          <div id="durationAuto" style="display:none;font-size:0.78em;color:var(--muted);padding:4px 2px;">
+            Durée décidée par l'IA selon l'action décrite
           </div>
         </div>
       </div>
@@ -1531,6 +1534,7 @@ function showConfirmation() {
 
   addAIMessage(html);
   document.getElementById('paramsZone').classList.add('visible');
+  updateParamsForWorkflow();
   showGenerateBtn();
 }
 
@@ -1556,6 +1560,7 @@ function showConfirmationVideoLongue(plan) {
     </div>`;
   addAIMessage(html);
   document.getElementById("paramsZone").classList.add("visible");
+  updateParamsForWorkflow();
   showGenerateBtn();
 }
 function restartFromDescription() {
@@ -2104,6 +2109,12 @@ function hideInputRow() {
 
 function showUpload2() {
   document.getElementById('uploadZone2').classList.add('visible');
+}
+
+function updateParamsForWorkflow() {
+  const isLong = workflow === 'video_longue';
+  document.getElementById('durationOptions').style.display = isLong ? 'none' : '';
+  document.getElementById('durationAuto').style.display    = isLong ? 'block' : 'none';
 }
 
 function showGenerateBtn() {

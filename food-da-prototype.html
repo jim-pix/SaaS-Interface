@@ -7,154 +7,205 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a08; --surface: #111110; --border: #222220;
-    --accent: #c8a96e; --accent-dim: #7a6440;
-    --text: #e8e4dc; --text-dim: #6b6760; --text-mid: #a09a90;
-    --green: #6a9e6f;
+    --bg: #0c0c0a; --surface: #131311; --border: #1e1e1c;
+    --accent: #c8a96e; --accent-dim: #6b5530;
+    --text: #eae6de; --text-dim: #5a5650; --text-mid: #9a948a;
+    --green: #6a9e6f; --red: #c0503a;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; display:flex; flex-direction:column; }
-  header { padding:16px 32px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
-  .logo { font-family:'Playfair Display',serif; font-size:18px; color:var(--accent); }
-  .logo span { color:var(--text-dim); font-style:italic; font-size:13px; margin-left:8px; }
-  .badge { background:rgba(200,169,110,0.08); border:1px solid var(--accent-dim); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; padding:4px 10px; letter-spacing:0.1em; text-transform:uppercase; }
-  .api-zone { margin-left:auto; display:flex; align-items:center; gap:10px; }
-  .api-input { background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:6px 12px; outline:none; width:300px; }
-  .api-input::placeholder { color:var(--text-dim); }
-  .api-input:focus { border-color:var(--accent-dim); }
-  .api-dot { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); }
-  .api-dot.on { color:var(--green); }
-  .layout { display:grid; grid-template-columns:340px 1fr; flex:1; }
-  .left { border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px; gap:20px; overflow-y:auto; }
-  .lbl { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
-  .drop { border:1px dashed var(--border); background:var(--surface); aspect-ratio:4/3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; position:relative; overflow:hidden; transition:border-color 0.2s; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* HEADER */
+  header { padding:14px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .logo { font-family:'Playfair Display',serif; font-size:17px; color:var(--accent); letter-spacing:0.02em; }
+  .logo em { color:var(--text-dim); font-size:12px; margin-left:6px; }
+  .pill { background:rgba(200,169,110,0.07); border:1px solid var(--accent-dim); color:var(--accent); font-family:'DM Mono',monospace; font-size:9px; padding:3px 9px; letter-spacing:0.12em; text-transform:uppercase; }
+  .api-row { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .api-in { background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:5px 10px; outline:none; width:280px; transition:border-color .2s; }
+  .api-in::placeholder { color:var(--text-dim); }
+  .api-in:focus { border-color:var(--accent-dim); }
+  .api-led { width:6px; height:6px; border-radius:50%; background:var(--text-dim); transition:background .3s; flex-shrink:0; }
+  .api-led.on { background:var(--green); box-shadow:0 0 6px var(--green); }
+
+  /* LAYOUT */
+  .layout { display:flex; flex:1; min-height:0; }
+
+  /* LEFT — product panel */
+  .left { width:280px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; padding:20px; gap:16px; }
+  .lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+
+  .drop { border:1px dashed var(--border); aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; position:relative; overflow:hidden; transition:border-color .2s, background .2s; background:var(--surface); }
   .drop:hover { border-color:var(--accent-dim); }
-  .drop.filled { border-style:solid; border-color:var(--accent-dim); }
-  .drop img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.85; }
-  .drop-ov { position:absolute; inset:0; background:linear-gradient(to top,rgba(10,10,8,.7) 0%,transparent 50%); }
-  .drop-ico { font-size:28px; opacity:0.3; }
-  .drop-txt { font-size:12px; color:var(--text-dim); text-align:center; }
+  .drop.filled { border:1px solid var(--accent-dim); }
+  .drop img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .drop-ov { position:absolute; inset:0; background:linear-gradient(to top,rgba(12,12,10,.8) 0%,transparent 60%); }
+  .drop-ico { font-size:24px; opacity:.25; position:relative; z-index:1; }
+  .drop-hint { font-size:11px; color:var(--text-dim); text-align:center; position:relative; z-index:1; line-height:1.4; }
+  .drop.filled .drop-ico, .drop.filled .drop-hint { display:none; }
   #fi { display:none; }
-  textarea.ctx { background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:300; padding:12px 14px; resize:none; width:100%; outline:none; line-height:1.6; }
-  textarea.ctx::placeholder { color:var(--text-dim); }
-  textarea.ctx:focus { border-color:var(--accent-dim); }
-  .go-btn { background:var(--accent); color:#0a0a08; border:none; padding:14px 20px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.2s; }
-  .go-btn:hover { opacity:0.85; }
-  .go-btn:disabled { opacity:0.3; cursor:not-allowed; }
-  .brief-box { background:var(--surface); border:1px solid var(--border); padding:16px; display:none; flex-direction:column; gap:12px; }
-  .brief-box.on { display:flex; }
-  .brow { display:flex; flex-direction:column; gap:4px; }
-  .bkey { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-dim); }
-  .bval { font-size:12px; color:var(--text-mid); line-height:1.5; }
-  .bval.hl { color:var(--text); font-style:italic; font-family:'Playfair Display',serif; font-size:14px; }
-  .val-btn { background:transparent; border:1px solid var(--green); color:var(--green); padding:10px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
-  .val-btn:hover { background:rgba(106,158,111,0.1); }
-  .right { display:flex; flex-direction:column; height:calc(100vh - 61px); }
-  .chat { flex:1; overflow-y:auto; padding:28px 36px; display:flex; flex-direction:column; gap:20px; scroll-behavior:smooth; }
-  .chat::-webkit-scrollbar { width:4px; }
+
+  .start-btn { background:var(--accent); color:#0c0c0a; border:none; padding:12px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; letter-spacing:0.06em; cursor:pointer; transition:opacity .2s; text-transform:uppercase; }
+  .start-btn:hover { opacity:.85; }
+  .start-btn:disabled { opacity:.25; cursor:not-allowed; }
+
+  .brief-preview { flex:1; overflow-y:auto; display:none; }
+  .brief-preview.on { display:block; }
+  .bp-title { font-family:'Playfair Display',serif; font-style:italic; font-size:13px; color:var(--accent); margin-bottom:12px; line-height:1.4; }
+  .bp-row { margin-bottom:10px; }
+  .bp-k { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-dim); margin-bottom:2px; }
+  .bp-v { font-size:11px; color:var(--text-mid); line-height:1.5; }
+
+  .gen-btn { background:transparent; border:1px solid var(--green); color:var(--green); padding:10px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; width:100%; transition:background .2s; display:none; }
+  .gen-btn.on { display:block; }
+  .gen-btn:hover { background:rgba(106,158,111,.1); }
+
+  /* RIGHT — chat */
+  .right { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+  .chat { flex:1; overflow-y:auto; padding:24px 32px; display:flex; flex-direction:column; gap:16px; }
+  .chat::-webkit-scrollbar { width:3px; }
   .chat::-webkit-scrollbar-thumb { background:var(--border); }
-  .msg { display:flex; flex-direction:column; gap:4px; max-width:760px; animation:fu 0.3s ease forwards; opacity:0; }
-  @keyframes fu { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
-  .msg.u { align-self:flex-end; align-items:flex-end; }
-  .msg.a { align-self:flex-start; align-items:flex-start; width:100%; }
-  .mmeta { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+
+  .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; pointer-events:none; }
+  .empty-sym { font-size:36px; opacity:.15; }
+  .empty-txt { font-family:'Playfair Display',serif; font-style:italic; font-size:15px; color:var(--text-dim); opacity:.4; }
+
+  /* Messages */
+  .msg { display:flex; flex-direction:column; gap:3px; animation:fu .25s ease forwards; opacity:0; }
+  @keyframes fu { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
+  .msg.u { align-self:flex-end; align-items:flex-end; max-width:65%; }
+  .msg.a { align-self:flex-start; align-items:flex-start; max-width:80%; }
+  .mmeta { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
   .msg.a .mmeta { color:var(--accent-dim); }
-  .mbub { padding:14px 18px; line-height:1.7; font-size:13.5px; }
-  .msg.u .mbub { background:#1a1a17; border:1px solid var(--border); color:var(--text-mid); max-width:480px; }
-  .msg.a .mbub { background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.15); border-left:3px solid var(--accent); color:var(--text); width:100%; }
-  .mbub h3 { font-family:'Playfair Display',serif; font-size:17px; font-weight:400; color:var(--accent); margin-bottom:12px; font-style:italic; }
-  .cs { margin-bottom:14px; }
-  .ct { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-dim); margin-bottom:4px; }
-  .cb { color:var(--text-mid); font-size:13px; line-height:1.6; }
-  .fxlist { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .fxt { background:rgba(200,169,110,0.08); border:1px solid var(--accent-dim); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; padding:3px 10px; }
-  .typing { display:none; align-items:center; gap:5px; padding:14px 18px; background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.15); border-left:3px solid var(--accent); width:fit-content; margin:0 36px; }
-  .typing.on { display:flex; }
-  .dot { width:5px; height:5px; background:var(--accent); border-radius:50%; animation:p 1.2s infinite; }
+
+  .mbub { padding:12px 16px; font-size:13.5px; line-height:1.75; }
+  .msg.u .mbub { background:#1a1a16; border:1px solid var(--border); color:var(--text-mid); border-radius:0; }
+  .msg.a .mbub { background:rgba(200,169,110,0.04); border:1px solid rgba(200,169,110,.12); border-left:2px solid var(--accent); color:var(--text); }
+
+  /* Image concept dans le chat */
+  .concept-img-wrap { margin-top:10px; border:1px solid var(--accent-dim); overflow:hidden; position:relative; }
+  .concept-img-wrap img { width:100%; display:block; }
+  .concept-img-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top,rgba(12,12,10,.9),transparent); padding:10px 12px 8px; font-family:'DM Mono',monospace; font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); }
+
+  /* Typing */
+  .typing { display:none; align-self:flex-start; padding:12px 16px; background:rgba(200,169,110,.04); border:1px solid rgba(200,169,110,.12); border-left:2px solid var(--accent); }
+  .typing.on { display:flex; gap:5px; align-items:center; }
+  .dot { width:4px; height:4px; background:var(--accent); border-radius:50%; animation:p 1.2s infinite; opacity:.3; }
   .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-  @keyframes p{0%,60%,100%{opacity:.2;transform:scale(1)}30%{opacity:1;transform:scale(1.3)}}
-  .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; opacity:0.25; }
-  .empty-ico { font-size:48px; }
-  .empty-txt { font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--text-dim); }
-  .izone { border-top:1px solid var(--border); padding:16px 24px; display:flex; gap:10px; align-items:flex-end; }
-  textarea.ci { flex:1; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:300; padding:12px 14px; resize:none; outline:none; line-height:1.5; max-height:120px; }
+  @keyframes p{0%,100%{opacity:.2;transform:scale(1)}40%{opacity:1;transform:scale(1.4)}}
+
+  /* Input */
+  .izone { border-top:1px solid var(--border); padding:14px 20px; display:flex; gap:8px; align-items:flex-end; flex-shrink:0; }
+  textarea.ci { flex:1; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:300; padding:10px 14px; resize:none; outline:none; line-height:1.5; max-height:100px; transition:border-color .2s; }
   textarea.ci::placeholder { color:var(--text-dim); }
   textarea.ci:focus { border-color:var(--accent-dim); }
-  .sbtn { background:var(--surface); border:1px solid var(--accent-dim); color:var(--accent); width:44px; height:44px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-  .sbtn:hover { background:rgba(200,169,110,0.1); }
-  .sbtn:disabled { opacity:0.3; cursor:not-allowed; }
-  .vbanner { display:none; background:rgba(106,158,111,0.08); border-top:1px solid rgba(106,158,111,0.3); padding:10px 24px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--green); text-align:center; }
-  .vbanner.on { display:block; }
+  .sbtn { background:var(--surface); border:1px solid var(--accent-dim); color:var(--accent); width:40px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; transition:background .2s; }
+  .sbtn:hover { background:rgba(200,169,110,.08); }
+  .sbtn:disabled { opacity:.25; cursor:not-allowed; }
+
   * { scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">EasyAI <span>Food Module</span></div>
-  <div class="badge">DA · Gemini 2.5 Flash</div>
-  <div class="api-zone">
-    <input class="api-input" type="password" id="apiKey" placeholder="Gemini API key (AIza…)" oninput="onKey()">
-    <span class="api-dot" id="apiDot">● no key</span>
+  <div class="logo">EasyAI <em>Food</em></div>
+  <div class="pill">DA · Gemini</div>
+  <div class="api-row">
+    <input class="api-in" type="password" id="apiKey" placeholder="Gemini API key…" oninput="onKey()">
+    <div class="api-led" id="led"></div>
   </div>
 </header>
 
 <div class="layout">
+
+  <!-- LEFT -->
   <div class="left">
     <div>
-      <div class="lbl">Produit</div>
+      <div class="lbl">Votre produit</div>
       <div class="drop" id="dz" onclick="document.getElementById('fi').click()">
-        <div class="drop-ico">📸</div>
-        <div class="drop-txt">Glisser une photo<br>ou cliquer pour choisir</div>
+        <div class="drop-ico">📷</div>
+        <div class="drop-hint">Déposer une photo<br>ou cliquer</div>
       </div>
       <input type="file" id="fi" accept="image/*">
     </div>
-    <div>
-      <div class="lbl">Contexte <span style="opacity:.4">(optionnel)</span></div>
-      <textarea class="ctx" id="ctx" rows="3" placeholder="Ex: burger premium, cible 25-35 ans, ambiance urbaine…"></textarea>
+
+    <button class="start-btn" id="startBtn" disabled onclick="startSession()">
+      Démarrer la session
+    </button>
+
+    <div class="brief-preview" id="briefPreview">
+      <div class="lbl" style="margin-bottom:10px">Brief généré</div>
+      <div id="briefContent"></div>
     </div>
-    <button class="go-btn" id="goBtn" disabled onclick="launch()">✦ Briefer le DA</button>
-    <div class="brief-box" id="briefBox">
-      <div class="lbl">Brief en cours</div>
-      <div id="briefRows"></div>
-      <button class="val-btn" id="valBtn" onclick="validate()">✓ Valider ce brief</button>
-    </div>
+
+    <button class="gen-btn" id="genBtn">
+      → Lancer la génération
+    </button>
   </div>
 
+  <!-- RIGHT -->
   <div class="right">
     <div class="chat" id="chat">
       <div class="empty" id="empty">
-        <div class="empty-ico">✦</div>
-        <div class="empty-txt">Le DA attend votre produit</div>
+        <div class="empty-sym">✦</div>
+        <div class="empty-txt">Uploadez votre produit pour commencer</div>
       </div>
     </div>
     <div class="typing" id="typing">
       <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
-    <div class="vbanner" id="vbanner">✓ Brief validé — prêt pour la génération</div>
     <div class="izone">
-      <textarea class="ci" id="ci" rows="1" placeholder="Réagir au brief, demander des ajustements…" onkeydown="hk(event)" oninput="ar(this)"></textarea>
+      <textarea class="ci" id="ci" rows="1"
+        placeholder="Répondez au DA…"
+        onkeydown="hk(event)" oninput="ar(this)" disabled></textarea>
       <button class="sbtn" id="sbtn" onclick="send()" disabled>→</button>
     </div>
   </div>
 </div>
 
 <script>
+// ─── State ───────────────────────────────────────────────
 var hist = [];
-var brief = null;
 var img64 = null;
 var imgMime = 'image/jpeg';
 var busy = false;
+var briefData = null;
+var sessionStarted = false;
 
-var SYS = 'Tu es un Directeur Artistique (DA) senior specialise en publicite food et gastronomie pour EasyAI, une plateforme de generation video IA. Ton role : analyser un produit alimentaire et proposer un brief creatif pub complet comme une agence haut de gamme. Reponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans backticks, sans texte avant ou apres. Format exact : {"concept":"titre creatif percutant","style":"nom du style visuel","ambiance":"description ambiance","eclairage":"type eclairage precis","plan":"type de plan et angle","mouvement":"mouvement camera ou sujet","palette":"couleurs dominantes hex + description","fx_montage":["effet 1","effet 2","effet 3","effet 4"],"prompt_flux":"prompt Flux complet pour background et scene","prompt_wan":"prompt WAN I2V optimise","justification":"pourquoi ces choix pour CE produit"}. Sois creatif, audacieux, precis. Pense pub Cannes Lions. Pour les ajustements, renvoie le JSON complet mis a jour.';
+// ─── System prompts ───────────────────────────────────────
 
+var SYS_DA = `Tu es un Directeur Artistique (DA) senior spécialisé en publicité food et gastronomie. Tu travailles pour EasyAI, une plateforme de génération vidéo IA pour la food.
+
+TON RÔLE : créer le concept créatif d'une courte vidéo pub (10s, format Reel Instagram) qui met en valeur un produit alimentaire.
+
+COMPORTEMENT :
+- Tu t'exprimes en français, de façon naturelle, chaleureuse et professionnelle. Pas de jargon inutile.
+- Au début, tu analyses le produit visible sur la photo et tu poses 2 ou 3 questions MAXIMUM pour cerner les besoins. Pas plus. Choisis uniquement les questions vraiment utiles pour prendre une bonne décision créative.
+- Si l'utilisateur dit qu'il ne sait pas, ou qu'il te fait confiance, tu prends toi-même la décision et tu la justifies simplement.
+- Une fois que tu as assez d'infos (après 1 ou 2 échanges max), tu proposes UN concept clair, décrit en langage simple et inspirant. Pas de liste technique. Tu parles comme un DA qui présente son idée à un client.
+- Après avoir présenté le concept, tu demandes si ça lui convient ou s'il veut ajuster quelque chose.
+- Quand le concept est validé (l'utilisateur dit oui, parfait, on y va, génial, etc.), tu génères le brief technique en JSON. Ce JSON doit être à la fin de ton message, précédé exactement de la ligne : ===BRIEF===
+- Ne montre JAMAIS le JSON à l'utilisateur dans ta réponse visible. Le JSON est uniquement pour le système.
+
+FORMAT JSON (après ===BRIEF===) :
+{"concept":"titre","style":"style visuel","ambiance":"ambiance","eclairage":"éclairage","plan":"plan et angle","mouvement":"mouvement","palette":"couleurs","fx":["effet1","effet2","effet3"],"prompt_flux":"prompt complet pour Flux pour générer le background et la mise en scène","prompt_wan":"prompt WAN I2V optimisé pour animer","prompt_image_concept":"prompt détaillé pour générer une image concept pub food qui visualise l'ambiance et la composition finale, sans texte, photoréaliste"}
+
+IMPORTANT : sois créatif et audacieux. Pense pub Cannes Lions, pas contenu générique.`;
+
+var SYS_IMG = `You are a photorealistic food advertisement image generator. Generate exactly what the prompt describes. High-end commercial photography style. No text, no watermarks, no UI elements. Pure visual only.`;
+
+// ─── API key ──────────────────────────────────────────────
 function onKey() {
   var v = document.getElementById('apiKey').value;
-  var d = document.getElementById('apiDot');
-  if (v.length > 8) { d.textContent = '● ready'; d.className = 'api-dot on'; }
-  else { d.textContent = '● no key'; d.className = 'api-dot'; }
+  var led = document.getElementById('led');
+  if (v.length > 8) { led.classList.add('on'); }
+  else { led.classList.remove('on'); }
+  if (img64 && v.length > 8) document.getElementById('startBtn').disabled = false;
+  else document.getElementById('startBtn').disabled = true;
 }
 
+// ─── File upload ──────────────────────────────────────────
 document.getElementById('fi').addEventListener('change', function(e) {
   var f = e.target.files[0];
   if (!f) return;
@@ -165,7 +216,8 @@ document.getElementById('fi').addEventListener('change', function(e) {
     var dz = document.getElementById('dz');
     dz.className = 'drop filled';
     dz.innerHTML = '<img src="' + ev.target.result + '"><div class="drop-ov"></div>';
-    document.getElementById('goBtn').disabled = false;
+    var key = document.getElementById('apiKey').value;
+    if (key.length > 8) document.getElementById('startBtn').disabled = false;
   };
   r.readAsDataURL(f);
 });
@@ -181,17 +233,29 @@ dz.addEventListener('drop', function(e) {
   }
 });
 
-function launch() {
+// ─── Start session ────────────────────────────────────────
+function startSession() {
   if (!img64 || busy) return;
-  var ctx = document.getElementById('ctx').value.trim();
-  var em = document.getElementById('empty');
-  if (em) em.remove();
-  var txt = ctx ? 'Voici mon produit. Contexte : ' + ctx : 'Voici mon produit. Propose ton brief creatif.';
-  addMsg('u', txt);
-  hist = [{ role: 'user', parts: [{ inline_data: { mime_type: imgMime, data: img64 } }, { text: txt }] }];
-  call();
+  sessionStarted = true;
+  document.getElementById('empty').remove();
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('ci').disabled = false;
+  document.getElementById('sbtn').disabled = false;
+
+  var opener = 'Bonjour ! Je viens de voir votre produit. Avant de vous proposer un concept vidéo, j\'ai deux ou trois questions rapides pour bien cerner ce que vous recherchez.';
+
+  hist = [{
+    role: 'user',
+    parts: [
+      { inline_data: { mime_type: imgMime, data: img64 } },
+      { text: 'Voici mon produit. Je voudrais un concept de vidéo pub pour le mettre en valeur.' }
+    ]
+  }];
+
+  callDA();
 }
 
+// ─── Send user message ────────────────────────────────────
 function send() {
   var ci = document.getElementById('ci');
   var t = ci.value.trim();
@@ -199,112 +263,163 @@ function send() {
   ci.value = ''; ci.style.height = 'auto';
   addMsg('u', t);
   hist.push({ role: 'user', parts: [{ text: t }] });
-  call();
+  callDA();
 }
 
-function call() {
+// ─── Call Gemini DA ───────────────────────────────────────
+function callDA() {
   var key = document.getElementById('apiKey').value.trim();
-  if (!key) { addMsg('a', 'Renseigne ta cle Gemini API dans le champ en haut.'); return; }
+  if (!key) return;
   setbusy(true);
 
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYS }] },
+      system_instruction: { parts: [{ text: SYS_DA }] },
       contents: hist,
-      generationConfig: { temperature: 1.0, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+      generationConfig: { temperature: 1.1, maxOutputTokens: 8192 }
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (d.error) { addMsg('a', 'Erreur Gemini : ' + d.error.message); setbusy(false); return; }
-    var raw = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0] ? d.candidates[0].content.parts[0].text : '';
-    var b = null;
-    try { b = JSON.parse(raw); } catch(e) {
-      var m = raw.match(/\{[\s\S]*\}/);
-      if (m) try { b = JSON.parse(m[0]); } catch(e2) {}
+    var raw = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts[0] ? d.candidates[0].content.parts[0].text : '';
+
+    // Split visible text and hidden brief
+    var parts = raw.split('===BRIEF===');
+    var visible = parts[0].trim();
+    var jsonPart = parts[1] ? parts[1].trim() : null;
+
+    // Show visible message
+    addMsg('a', visible);
+
+    // Add to history (full response including JSON)
+    hist.push({ role: 'model', parts: [{ text: raw }] });
+
+    // If brief detected → extract, show in sidebar, generate concept image
+    if (jsonPart) {
+      try {
+        var b = JSON.parse(jsonPart);
+        briefData = b;
+        showBriefSidebar(b);
+        if (b.prompt_image_concept) {
+          generateConceptImage(b.prompt_image_concept, visible);
+        }
+        document.getElementById('genBtn').classList.add('on');
+      } catch(e) {
+        console.log('JSON parse error:', e, jsonPart);
+      }
     }
-    if (b) {
-      brief = b;
-      addBrief(b);
-      updateBox(b);
-      hist.push({ role: 'model', parts: [{ text: raw }] });
-      document.getElementById('sbtn').disabled = false;
-    } else {
-      addMsg('a', raw || 'Reponse inattendue.');
-    }
+
     setbusy(false);
   })
-  .catch(function(e) { addMsg('a', 'Erreur : ' + e.message); setbusy(false); });
+  .catch(function(e) { addMsg('a', 'Erreur réseau : ' + e.message); setbusy(false); });
 }
 
-function addBrief(b) {
+// ─── Generate concept image via Gemini Imagen ─────────────
+function generateConceptImage(prompt, daMessage) {
+  var key = document.getElementById('apiKey').value.trim();
+
+  // Add a "generating" placeholder in chat
   var chat = document.getElementById('chat');
-  var div = document.createElement('div');
-  div.className = 'msg a';
-  var fx = '';
-  if (b.fx_montage && Array.isArray(b.fx_montage)) b.fx_montage.forEach(function(f) { fx += '<span class="fxt">' + f + '</span>'; });
-  var mono = 'font-family:\'DM Mono\',monospace;font-size:11px;opacity:.7;word-break:break-word;';
-  div.innerHTML = '<div class="mmeta">DA ✦ ' + ts() + '</div><div class="mbub">' +
-    '<h3>' + (b.concept||'Concept') + '</h3>' +
-    cs('Style & Ambiance', '<strong style="color:var(--text)">' + (b.style||'') + '</strong> — ' + (b.ambiance||'')) +
-    cs('Eclairage', b.eclairage||'') +
-    cs('Plan & Mouvement', (b.plan||'') + ' · ' + (b.mouvement||'')) +
-    cs('Palette', b.palette||'') +
-    (fx ? '<div class="cs"><div class="ct">FX Montage</div><div class="fxlist">' + fx + '</div></div>' : '') +
-    cs('Prompt Flux', '<span style="' + mono + '">' + (b.prompt_flux||'') + '</span>') +
-    cs('Prompt WAN I2V', '<span style="' + mono + '">' + (b.prompt_wan||'') + '</span>') +
-    '<div class="cs" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px"><div class="ct">Pourquoi ces choix</div><div class="cb" style="font-style:italic">' + (b.justification||'') + '</div></div>' +
-    '</div>';
-  chat.appendChild(div);
+  var placeholder = document.createElement('div');
+  placeholder.className = 'msg a';
+  placeholder.id = 'img-placeholder';
+  placeholder.innerHTML = '<div class="mmeta">DA · Image concept</div><div class="mbub" style="color:var(--text-dim);font-style:italic;font-size:12px;">Génération de l\'image concept en cours…</div>';
+  chat.appendChild(placeholder);
   chat.scrollTop = chat.scrollHeight;
+
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=' + key, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    var ph = document.getElementById('img-placeholder');
+    if (d.error) {
+      if (ph) ph.remove();
+      return;
+    }
+    // Find image part
+    var imgData = null;
+    var imgMimeType = 'image/png';
+    if (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) {
+      d.candidates[0].content.parts.forEach(function(p) {
+        if (p.inlineData) { imgData = p.inlineData.data; imgMimeType = p.inlineData.mimeType || 'image/png'; }
+      });
+    }
+    if (imgData && ph) {
+      var src = 'data:' + imgMimeType + ';base64,' + imgData;
+      ph.innerHTML = '<div class="mmeta">DA · Image concept</div>' +
+        '<div class="mbub" style="padding:0;overflow:hidden;">' +
+        '<div class="concept-img-wrap">' +
+        '<img src="' + src + '" alt="Image concept">' +
+        '<div class="concept-img-label">Image concept — ' + (briefData ? briefData.concept : '') + '</div>' +
+        '</div>' +
+        '<div style="padding:12px 16px;font-size:12px;color:var(--text-dim);font-style:italic;">Voilà l\'ambiance que j\'ai en tête. Qu\'est-ce que vous en pensez ?</div>' +
+        '</div>';
+      chat.scrollTop = chat.scrollHeight;
+    } else if (ph) {
+      ph.remove();
+    }
+  })
+  .catch(function(e) {
+    var ph = document.getElementById('img-placeholder');
+    if (ph) ph.remove();
+    console.log('Image gen error:', e);
+  });
 }
 
-function cs(t, body) { return '<div class="cs"><div class="ct">' + t + '</div><div class="cb">' + body + '</div></div>'; }
+// ─── Sidebar brief ────────────────────────────────────────
+function showBriefSidebar(b) {
+  var bp = document.getElementById('briefPreview');
+  var bc = document.getElementById('briefContent');
+  var rows = '';
+  if (b.concept) rows += brow('Concept', b.concept);
+  if (b.style) rows += brow('Style', b.style);
+  if (b.plan) rows += brow('Plan', b.plan);
+  if (b.mouvement) rows += brow('Mouvement', b.mouvement);
+  if (b.prompt_flux) rows += brow('Prompt Flux', b.prompt_flux);
+  if (b.prompt_wan) rows += brow('Prompt WAN', b.prompt_wan);
+  if (b.fx && b.fx.length) rows += brow('FX montage', b.fx.join(', '));
+  bc.innerHTML = rows;
+  bp.classList.add('on');
+}
 
+function brow(k, v) {
+  return '<div class="bp-row"><div class="bp-k">' + k + '</div><div class="bp-v">' + v + '</div></div>';
+}
+
+// ─── UI helpers ───────────────────────────────────────────
 function addMsg(type, txt) {
   var chat = document.getElementById('chat');
   var div = document.createElement('div');
   div.className = 'msg ' + type;
-  div.innerHTML = type === 'u'
-    ? '<div class="mmeta">Vous</div><div class="mbub">' + txt + '</div>'
-    : '<div class="mmeta">DA ✦ ' + ts() + '</div><div class="mbub">' + txt + '</div>';
+  var time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  var meta = type === 'u' ? 'Vous' : 'DA ✦ ' + time;
+  // Convert newlines to <br>
+  var html = txt.replace(/\n/g, '<br>');
+  div.innerHTML = '<div class="mmeta">' + meta + '</div><div class="mbub">' + html + '</div>';
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
-}
-
-function updateBox(b) {
-  document.getElementById('briefRows').innerHTML =
-    br('Concept', b.concept||'', true) +
-    br('Style', b.style||'') +
-    br('Plan', b.plan||'') +
-    br('Mouvement', b.mouvement||'');
-  document.getElementById('briefBox').classList.add('on');
-}
-
-function br(k, v, hl) { return '<div class="brow"><div class="bkey">' + k + '</div><div class="bval' + (hl?' hl':'') + '">' + v + '</div></div>'; }
-
-function validate() {
-  if (!brief) return;
-  document.getElementById('vbanner').classList.add('on');
-  var btn = document.getElementById('valBtn');
-  btn.textContent = '✓ Valide'; btn.disabled = true; btn.style.opacity = '.5';
-  console.log('=== BRIEF VALIDE ===\n' + JSON.stringify(brief, null, 2));
 }
 
 function setbusy(s) {
   busy = s;
   var t = document.getElementById('typing');
   if (s) t.classList.add('on'); else t.classList.remove('on');
-  document.getElementById('goBtn').disabled = s || !img64;
   document.getElementById('sbtn').disabled = s;
+  document.getElementById('ci').disabled = s;
   if (s) { var c = document.getElementById('chat'); c.scrollTop = c.scrollHeight; }
 }
 
 function hk(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
-function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-function ts() { return new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}); }
+function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
 </script>
 </body>
 </html>

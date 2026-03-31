@@ -488,9 +488,13 @@ const BACKEND_URL = 'https://wan22-backend.fly.dev';
 // ══════════════════════════════════════════
 const apiToken    = localStorage.getItem('easyai_token') || '';
 const jobId       = localStorage.getItem('easyai_job_id') || '';
-const imageData   = localStorage.getItem('easyai_image') || '';   // base64
+const imageData   = localStorage.getItem('easyai_image') || '';
 const promptFr    = localStorage.getItem('easyai_prompt') || '';
 const workflowType = localStorage.getItem('easyai_workflow') || 'anim';
+const savedPayload = (() => {
+  try { return JSON.parse(localStorage.getItem('easyai_payload') || 'null'); }
+  catch(e) { return null; }
+})();
 
 if (!apiToken) { location.href = 'index.html'; }
 
@@ -498,7 +502,9 @@ if (!apiToken) { location.href = 'index.html'; }
 //  UI
 // ══════════════════════════════════════════
 let chronoInterval = null;
-let startTime = Date.now();
+// Reprendre le chrono depuis le début du job si on revient sur la page
+const savedStartTime = localStorage.getItem('easyai_start_time');
+let startTime = savedStartTime ? parseInt(savedStartTime) : Date.now();
 let currentJobId = jobId;
 let done = false;
 
@@ -556,7 +562,10 @@ function showError(msg) {
   card.textContent = '⚠️ ' + msg;
   card.classList.add('visible');
   document.getElementById('cancelBtn').classList.remove('visible');
-  document.getElementById('retryBtn').style.display = 'block';
+  // Adapter le label selon si on peut relancer directement
+  const retryBtn = document.getElementById('retryBtn');
+  retryBtn.textContent = savedPayload ? '↺ Relancer à l\'identique' : '↩ Retour au chat';
+  retryBtn.style.display = 'block';
   document.getElementById('newBtn').classList.add('visible');
   addLog(msg, 'err');
 }
@@ -591,8 +600,10 @@ function showResult(videoUrl) {
 //  POLLING
 // ══════════════════════════════════════════
 async function pollStatus(jobId) {
-  const maxAttempts = 300;
+  const maxAttempts = 400;
   let attempts = 0;
+  let lastStatus = '';
+  let inProgressCount = 0;
 
   while (attempts < maxAttempts && !done) {
     await sleep(3000);
@@ -605,22 +616,45 @@ async function pollStatus(jobId) {
       const data = await res.json();
       const status = data.status;
 
+      // Log uniquement au changement de statut
+      if (status !== lastStatus) {
+        addLog(`Statut : ${status}`, 'info');
+        lastStatus = status;
+      }
+
       if (status === 'IN_QUEUE') {
-        setProgress(10, 'En attente dans la file RunPod...');
+        setProgress(8, 'En attente dans la file RunPod...');
         setStatus('File d\'attente');
-        if (attempts === 1) addLog('Job en attente dans la file RunPod', 'info');
 
       } else if (status === 'IN_PROGRESS') {
-        const pct = Math.min(15 + attempts * 2, 88);
-        setProgress(pct, 'WanVideo génère ta vidéo...');
+        inProgressCount++;
+        // Estimer la progression selon le temps écoulé
+        // WanVideo prend ~5-8min pour 81 frames — on simule une courbe réaliste
+        const elapsed = inProgressCount * 3; // secondes
+        let pct, label;
+        if (elapsed < 30) {
+          pct = 15; label = 'Chargement du modèle...';
+        } else if (elapsed < 90) {
+          pct = 25; label = 'Encodage de l\'image...';
+        } else if (elapsed < 180) {
+          pct = Math.min(25 + (elapsed - 90) / 3, 55); label = 'Génération en cours...';
+        } else if (elapsed < 400) {
+          pct = Math.min(55 + (elapsed - 180) / 5, 85); label = 'Débruitage des frames...';
+        } else {
+          pct = Math.min(85 + (elapsed - 400) / 20, 93); label = 'Finalisation...';
+        }
+        setProgress(Math.round(pct), label);
         setStatus('Génération');
-        if (attempts === 2) addLog('Génération WanVideo démarrée', 'info');
 
       } else if (status === 'COMPLETED') {
         addLog('Job terminé, récupération vidéo...', 'info');
         const output = data.output;
         const videoUrl = output?.download_url || output?.video_urls?.[0];
-
+        // Nettoyer le localStorage et mettre à jour le nav
+        localStorage.removeItem('easyai_job_id');
+        localStorage.removeItem('easyai_payload');
+        localStorage.removeItem('easyai_start_time');
+        updateNavGenerating();
         if (videoUrl) {
           await saveGeneration(jobId, videoUrl);
           showResult(videoUrl);
@@ -630,6 +664,9 @@ async function pollStatus(jobId) {
         return;
 
       } else if (status === 'FAILED' || status === 'CANCELLED') {
+        localStorage.removeItem('easyai_job_id');
+        localStorage.removeItem('easyai_start_time');
+        updateNavGenerating();
         showError(`Job ${status} : ${data.error || 'erreur inconnue'}`);
         return;
       }
@@ -639,7 +676,16 @@ async function pollStatus(jobId) {
     }
   }
 
+  localStorage.removeItem('easyai_job_id');
+  localStorage.removeItem('easyai_start_time');
+  updateNavGenerating();
   showError('Timeout — génération trop longue.');
+}
+
+function updateNavGenerating() {
+  // Masquer le bouton "En cours" dans le header
+  const btn = document.getElementById('navGenerating');
+  if (btn) btn.classList.add('nav-hidden');
 }
 
 async function saveGeneration(jobId, videoUrl) {
@@ -713,12 +759,51 @@ async function cancelJob() {
   localStorage.removeItem('easyai_job_id');
 }
 
-function retryJob() {
-  // Remet le même job_id dans localStorage et recharge la page
-  // Le payload original est perdu — on redirige vers le chat
-  if (confirm('Les paramètres seront rechargés depuis le chat. Continuer ?')) {
+async function retryJob() {
+  if (!savedPayload) {
+    // Pas de payload sauvegardé — retour au chat
     localStorage.removeItem('easyai_job_id');
     location.href = 'index.html';
+    return;
+  }
+
+  // Réinitialiser l'UI
+  done = false;
+  document.getElementById('errorCard').classList.remove('visible');
+  document.getElementById('retryBtn').style.display = 'none';
+  document.getElementById('newBtn').classList.remove('visible');
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('previewWrap').classList.remove('done');
+  document.getElementById('previewStatus').style.display = 'block';
+  document.getElementById('cancelBtn').classList.add('visible');
+  document.getElementById('progressWrap').classList.add('visible');
+  stopChrono();
+  startChrono();
+  setProgress(5, 'Relance en cours...');
+  setStatus('Démarrage');
+  addLog('Relance du même job...', 'info');
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Token': apiToken },
+      body: JSON.stringify(savedPayload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Erreur backend');
+    }
+
+    const job = await res.json();
+    const newJobId = job.id;
+    localStorage.setItem('easyai_job_id', newJobId);
+    currentJobId = newJobId;
+    addLog(`Nouveau job : ${newJobId}`, 'info');
+    pollStatus(newJobId);
+
+  } catch(e) {
+    showError(`Erreur relance : ${e.message}`);
   }
 }
 

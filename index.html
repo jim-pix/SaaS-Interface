@@ -1692,9 +1692,12 @@ async function startGeneration() {
 
     // Sauvegarder dans localStorage pour generation.html
     localStorage.setItem('easyai_job_id',   jobId);
+    localStorage.setItem('easyai_start_time', Date.now().toString());
     localStorage.setItem('easyai_image',    imageBase64 || '');
     localStorage.setItem('easyai_prompt',   finalPrompt);
     localStorage.setItem('easyai_workflow', workflow || 'anim');
+    // Sauvegarder le payload complet pour le retry sans retour au chat
+    try { localStorage.setItem('easyai_payload', JSON.stringify(payload)); } catch(e) {}
 
     // Rediriger — window.location.replace fonctionne mieux sur iOS Safari
     window.location.replace('generation.html');

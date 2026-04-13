@@ -721,7 +721,7 @@ document.getElementById('fi').addEventListener('change', function(e) {
     dz.classList.add('filled');
     document.getElementById('preview-photo').src = ev.target.result;
     var token = window._token || sessionStorage.getItem('food_token') || '';
-    if (key.length > 8) document.getElementById('startBtn').disabled = false;
+    if (token.length > 8) document.getElementById('startBtn').disabled = false;
   };
   r.readAsDataURL(f);
 });

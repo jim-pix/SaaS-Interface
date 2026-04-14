@@ -822,12 +822,12 @@ function callDA() {
       setbusy(false);
       return;
     }
-    var raw = d.text || '';
-    var parts = raw.split('===BRIEF===');
-    var visible = parts[0].trim();
-    var jsonPart = parts[1] ? parts[1].trim() : null;
+    var visible = d.text || '';
+    var jsonPart = d.brief || null;
     addMsg('a', visible);
-    hist.push({ role: 'model', parts: [{ text: raw }] });
+    // Stocker dans hist le texte visible + brief pour contexte Gemini
+    var fullText = jsonPart ? visible + '\n===BRIEF===\n' + jsonPart : visible;
+    hist.push({ role: 'model', parts: [{ text: fullText }] });
     if (jsonPart) {
       try {
         var cleaned = jsonPart
@@ -839,18 +839,7 @@ function callDA() {
         var startIdx = cleaned.indexOf('{');
         if (startIdx === -1) throw new Error('Pas de JSON');
         cleaned = cleaned.slice(startIdx);
-        var jsonStr = '', depth = 0, inString = false, escape = false;
-        for (var i = 0; i < cleaned.length; i++) {
-          var c = cleaned[i];
-          if (escape) { jsonStr += c; escape = false; continue; }
-          if (c === '\\' && inString) { jsonStr += c; escape = true; continue; }
-          if (c === '"') inString = !inString;
-          if (!inString && c === '{') depth++;
-          if (!inString && c === '}') depth--;
-          jsonStr += c;
-          if (depth === 0 && jsonStr.trim().startsWith('{')) break;
-        }
-        var b = JSON.parse(jsonStr);
+        var b = JSON.parse(cleaned);
         briefData = b;
         if (b.phase === '1a') {
           generateStylePreviews(b.styles);
@@ -865,16 +854,6 @@ function callDA() {
           }
         }
       } catch(e) { console.log('JSON parse error:', e, jsonPart); }
-    }
-    if (!jsonPart && !briefData && sessionStarted) {
-      var lowerRaw = raw.toLowerCase();
-      if (lowerRaw.indexOf('concept') !== -1 || lowerRaw.indexOf('direction') !== -1 || lowerRaw.indexOf('ambiance') !== -1) {
-        setTimeout(function() {
-          hist.push({ role: 'user', parts: [{ text: 'SYSTÈME : Tu as oublié de générer le ===BRIEF=== avec le JSON. Génère-le maintenant immédiatement.' }] });
-          callDA();
-        }, 300);
-        return;
-      }
     }
     setbusy(false);
   })

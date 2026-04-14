@@ -818,7 +818,7 @@ function callDA() {
   })
   .then(function(d) {
     if (d.status !== 'ok') {
-      addMsg('a', 'Le DA subit une forte demande. Réessayez dans quelques secondes.');
+      addMsg('a', 'Quota de requêtes DA dépassé, contactez le SAV.');
       setbusy(false);
       return;
     }
@@ -879,7 +879,7 @@ function callDA() {
     setbusy(false);
   })
   .catch(function(e) {
-    addMsg('a', e.message === 'quota' ? 'Le DA subit une forte demande. Réessayez.' : 'Erreur réseau : ' + e.message);
+    addMsg('a', e.message === 'quota' ? 'Quota de requêtes DA dépassé, contactez le SAV.' : 'Erreur réseau : ' + e.message);
     setbusy(false);
   });
 }

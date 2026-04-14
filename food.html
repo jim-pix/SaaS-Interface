@@ -806,7 +806,7 @@ function callDA() {
   if (!token) return;
   setbusy(true);
 
-  fetch('/food/da/chat', {
+  fetch(SERVER + '/food/da/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Token': token },
     body: JSON.stringify({ history: hist })
@@ -934,7 +934,7 @@ function generateKeyframes(brief) {
     chat.appendChild(ph);
     chat.scrollTop = chat.scrollHeight;
 
-    fetch('/food/generate', {
+    fetch(SERVER + '/food/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ image: sourceImg, prompt: prompt })
@@ -1038,7 +1038,7 @@ function generateVideo() {
     var statusEl = document.getElementById('vclip-status-' + idx);
     if (statusEl) statusEl.textContent = 'génération…';
 
-    fetch('/food/generate_video', {
+    fetch(SERVER + '/food/generate_video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ mode: 'olf', frames: [frameImg], prompt: prompt })
@@ -1081,7 +1081,7 @@ function pollClip(jobId, clipIdx, attempt, onDone) {
   var statusEl = document.getElementById('vclip-status-' + clipIdx);
   if (statusEl) statusEl.textContent = 'génération… ' + (attempt * 5) + 's';
   setTimeout(function() {
-    fetch('/food/video_result', {
+    fetch(SERVER + '/food/video_result', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ job_id: jobId })
@@ -1104,7 +1104,7 @@ function concatAndShow(videoResults) {
     return;
   }
 
-  fetch('/food/concat_videos', {
+  fetch(SERVER + '/food/concat_videos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
     body: JSON.stringify({ videos: validVideos })
@@ -1198,7 +1198,7 @@ function generateConceptImage(prompt, daMessage) {
   chat.appendChild(placeholder);
   chat.scrollTop = chat.scrollHeight;
 
-  fetch('/food/da/imggen', {
+  fetch(SERVER + '/food/da/imggen', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Token': token },
     body: JSON.stringify({ prompt: prompt })
@@ -1341,7 +1341,7 @@ function generateHDAngles(brief) {
       }, 800);
       return;
     }
-    fetch('/food/generate', {
+    fetch(SERVER + '/food/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ image: img64, prompt: angles[idx].prompt, angle: idx, mode: brief.mode || 'angles' })
@@ -1431,7 +1431,7 @@ function generateStylePreviews(styles) {
       return;
     }
     var style = styles[idx];
-    fetch('/food/generate', {
+    fetch(SERVER + '/food/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ image: img64, prompt: style.prompt, preview: true })
@@ -1510,7 +1510,7 @@ function generateKontext() {
   var kontextPrompt = briefData.prompt_flux ||
     'Keep this exact food product but dramatically improve it: enhance the lighting with professional studio quality, make the textures more vibrant and appetizing, add a cinematic dark moody atmosphere with warm amber tones.';
 
-  fetch('/food/generate', {
+  fetch(SERVER + '/food/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
     body: JSON.stringify({
@@ -1563,7 +1563,7 @@ function startHeartbeat() {
   _heartbeatTimer = setInterval(function() {
     var token = window._token || sessionStorage.getItem('food_token') || '';
     if (!token) return;
-    fetch('/food/heartbeat', {
+    fetch(SERVER + '/food/heartbeat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': token },
       body: JSON.stringify({ active: true })
@@ -1574,7 +1574,7 @@ function pauseHeartbeat() {
   // Appeler pendant génération active
   var token = window._token || sessionStorage.getItem('food_token') || '';
   if (!token) return;
-  fetch('/food/heartbeat', {
+  fetch(SERVER + '/food/heartbeat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Token': token },
     body: JSON.stringify({ active: false })

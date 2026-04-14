@@ -1580,14 +1580,14 @@ function pauseHeartbeat() {
     body: JSON.stringify({ active: false })
   }).catch(function() {});
 }
-startHeartbeat();
+// startHeartbeat(); // TODO: activer quand RunPod opérationnel
 
 // Arrêt pod au déchargement
-window.addEventListener('beforeunload', function() {
-  var token = window._token || sessionStorage.getItem('food_token') || '';
-  if (!token) return;
-  navigator.sendBeacon('/food/stop', JSON.stringify({ token: token }));
-});
+// window.addEventListener('beforeunload', function() {
+//   var token = window._token || sessionStorage.getItem('food_token') || '';
+//   if (!token) return;
+//   navigator.sendBeacon('/food/stop', JSON.stringify({ token: token }));
+// });
 </script>
 
 </body>

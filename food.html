@@ -859,9 +859,24 @@ function callDA() {
     setbusy(false);
   })
   .catch(function(e) {
-    addMsg('a', e.message === 'quota' ? 'Quota de requêtes DA dépassé, contactez le SAV.' : e.message === 'surcharge' ? 'Le service IA est momentanément surchargé, réessayez dans quelques secondes.' : 'Erreur réseau : ' + e.message);
+    var isSurcharge = e.message === 'surcharge' || e.message === 'quota';
+    var msg = e.message === 'quota' ? 'Quota de requêtes DA dépassé, contactez le SAV.' 
+            : e.message === 'surcharge' ? 'Le service IA est momentanément surchargé.' 
+            : 'Erreur réseau : ' + e.message;
+    if (isSurcharge) {
+      var retryId = 'retry-' + Date.now();
+      addMsg('a', msg + ' <button id="' + retryId + '" onclick="retryDA(\'' + retryId + '\')" style="margin-left:8px;padding:4px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;">↺ Réessayer</button>');
+    } else {
+      addMsg('a', msg);
+    }
     setbusy(false);
   });
+}
+
+function retryDA(btnId) {
+  var btn = document.getElementById(btnId);
+  if (btn) btn.parentElement.parentElement.remove(); // retire le message d'erreur
+  callDA();
 }
 
 // ─── Generate 3 keyframes via Kontext ────────────────────

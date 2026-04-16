@@ -316,7 +316,164 @@
   .drop-big.filled img.preview-photo { display:block; }
   .drop-big.filled .drop-big-ico, .drop-big.filled .drop-big-hint { display:none; }
   .drop-big-ico { font-size:36px; opacity:.25; }
-  .drop-big-hint { font-size:12px; color:var(--text-dim); text-align:center; line-height:1.5; }
+  .drop-big-hint { font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+  /* ── FORMAT SELECTOR ── */
+  .format-selector {
+    display:flex;
+    gap:0;
+    width:100%;
+    border:1px solid var(--border);
+    overflow:hidden;
+  }
+  .fmt-btn {
+    flex:1;
+    background:transparent;
+    border:none;
+    border-right:1px solid var(--border);
+    color:var(--text-dim);
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    padding:10px 6px;
+    cursor:pointer;
+    transition:background .2s, color .2s;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+  }
+  .fmt-btn:last-child { border-right:none; }
+  .fmt-btn:hover { background:rgba(255,255,255,0.05); color:var(--text); }
+  .fmt-btn.active { background:rgba(232,213,176,0.08); color:var(--accent); border-right:1px solid var(--border); }
+  .fmt-btn:last-child.active { border-right:none; }
+  .fmt-icon {
+    width:18px;
+    height:18px;
+    border:1.5px solid currentColor;
+    opacity:0.7;
+    flex-shrink:0;
+  }
+  .fmt-icon.landscape { width:22px; height:14px; }
+  .fmt-icon.portrait  { width:14px; height:22px; }
+  .fmt-icon.square    { width:18px; height:18px; }
+
+  /* ── BOTTOM SHEET ── */
+  .sheet-overlay {
+    position:fixed;
+    inset:0;
+    background:rgba(5,12,22,0.72);
+    z-index:200;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+  }
+  .sheet-overlay.open { opacity:1; pointer-events:all; }
+
+  .bottom-sheet {
+    position:fixed;
+    bottom:0; left:0; right:0;
+    z-index:201;
+    background:#0d1e2e;
+    border-top:1px solid var(--border-mid);
+    padding-bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+  }
+  .bottom-sheet.open { transform:translateY(0); }
+
+  .sheet-handle {
+    width:36px; height:3px;
+    background:var(--border-mid);
+    border-radius:2px;
+    margin:12px auto 0;
+  }
+
+  .sheet-title {
+    font-family:'Cormorant Garamond',serif;
+    font-size:13px;
+    font-weight:300;
+    letter-spacing:0.12em;
+    color:var(--text-dim);
+    text-align:center;
+    padding:14px 24px 6px;
+    text-transform:uppercase;
+  }
+
+  .sheet-sep {
+    height:1px;
+    background:var(--border);
+    margin:0 24px 4px;
+  }
+
+  .sheet-item {
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:15px 28px;
+    cursor:pointer;
+    transition:background .15s;
+    border:none;
+    background:transparent;
+    width:100%;
+    text-align:left;
+  }
+  .sheet-item:hover, .sheet-item:active { background:rgba(255,255,255,0.04); }
+
+  .sheet-item-icon {
+    width:38px; height:38px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.04);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    font-size:17px;
+  }
+
+  .sheet-item-text { flex:1; }
+  .sheet-item-label {
+    font-family:'DM Sans',sans-serif;
+    font-size:14px;
+    font-weight:400;
+    color:var(--text);
+    letter-spacing:0.02em;
+  }
+  .sheet-item-sub {
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.1em;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    margin-top:2px;
+  }
+  .sheet-item-arrow {
+    font-size:11px;
+    color:var(--accent-dim);
+    flex-shrink:0;
+  }
+
+  .sheet-cancel {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    margin:4px 24px 0;
+    border:1px solid var(--border);
+    background:transparent;
+    cursor:pointer;
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    width:calc(100% - 48px);
+    transition:color .2s, border-color .2s;
+  }
+  .sheet-cancel:hover { color:var(--text); border-color:var(--border-mid); }
   .start-btn {
     width:100%;
     max-width:300px;
@@ -557,13 +714,69 @@
     <div class="upload-screen" id="upload-screen">
       <div class="upload-logo">EasyAI <em>Food · Directeur Artistique IA</em></div>
       <div class="drop-wrap">
-        <div class="drop-big" id="dz" onclick="document.getElementById('fi').click()">
-          <div class="drop-big-ico">📷</div>
-          <div class="drop-big-hint">Photographier ou charger<br>votre plat</div>
+
+        <!-- Zone preview / tap to open sheet -->
+        <div class="drop-big" id="dz" onclick="openSheet()">
+          <div class="drop-big-ico">✦</div>
+          <div class="drop-big-hint">Touchez pour<br>charger votre plat</div>
           <img class="preview-photo" id="preview-photo" src="">
         </div>
-        <input type="file" id="fi" accept="image/*" capture="environment">
+
+        <!-- Sélecteur de format -->
+        <div class="format-selector" id="formatSelector">
+          <button class="fmt-btn active" id="fmt-916" onclick="setFormat('9:16',this)">
+            <div class="fmt-icon portrait"></div>
+            9:16
+          </button>
+          <button class="fmt-btn" id="fmt-11" onclick="setFormat('1:1',this)">
+            <div class="fmt-icon square"></div>
+            1:1
+          </button>
+          <button class="fmt-btn" id="fmt-169" onclick="setFormat('16:9',this)">
+            <div class="fmt-icon landscape"></div>
+            16:9
+          </button>
+        </div>
+
+        <!-- Inputs cachés -->
+        <input type="file" id="fi-camera"  accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="fi-gallery" accept="image/*"                       style="display:none">
+        <input type="file" id="fi-files"   accept="image/*,image/heic,image/heif" style="display:none">
+
         <button class="start-btn" id="startBtn" disabled onclick="startSession()">Analyser ce plat →</button>
+      </div>
+
+      <!-- Bottom Sheet -->
+      <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+      <div class="bottom-sheet" id="bottomSheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Choisir une image</div>
+        <div class="sheet-sep"></div>
+        <button class="sheet-item" onclick="triggerInput('camera')">
+          <div class="sheet-item-icon">⬤</div>
+          <div class="sheet-item-text">
+            <div class="sheet-item-label">Appareil photo</div>
+            <div class="sheet-item-sub">Prendre une photo maintenant</div>
+          </div>
+          <div class="sheet-item-arrow">›</div>
+        </button>
+        <button class="sheet-item" onclick="triggerInput('gallery')">
+          <div class="sheet-item-icon">▦</div>
+          <div class="sheet-item-text">
+            <div class="sheet-item-label">Pellicule</div>
+            <div class="sheet-item-sub">Choisir dans vos photos</div>
+          </div>
+          <div class="sheet-item-arrow">›</div>
+        </button>
+        <button class="sheet-item" onclick="triggerInput('files')">
+          <div class="sheet-item-icon">◫</div>
+          <div class="sheet-item-text">
+            <div class="sheet-item-label">Fichiers</div>
+            <div class="sheet-item-sub">iCloud Drive, Fichiers…</div>
+          </div>
+          <div class="sheet-item-arrow">›</div>
+        </button>
+        <button class="sheet-cancel" onclick="closeSheet()">Annuler</button>
       </div>
     </div>
 
@@ -709,31 +922,89 @@ function onKey() {
 }
 
 
-// ─── File upload ──────────────────────────────────────────
-document.getElementById('fi').addEventListener('change', function(e) {
-  var f = e.target.files[0];
+// ─── Format sélecteur ────────────────────────────────────
+var selectedFormat = '9:16';
+function setFormat(fmt, btn) {
+  selectedFormat = fmt;
+  document.querySelectorAll('.fmt-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  // Adapter l'aspect ratio de la drop zone
+  var dz = document.getElementById('dz');
+  if (fmt === '16:9') dz.style.aspectRatio = '16/9';
+  else if (fmt === '1:1') dz.style.aspectRatio = '1/1';
+  else dz.style.aspectRatio = '3/4';
+}
+
+// ─── Bottom sheet ─────────────────────────────────────────
+function openSheet() {
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('bottomSheet').classList.add('open');
+}
+function closeSheet() {
+  document.getElementById('sheetOverlay').classList.remove('open');
+  document.getElementById('bottomSheet').classList.remove('open');
+}
+function triggerInput(src) {
+  closeSheet();
+  setTimeout(function() {
+    document.getElementById('fi-' + src).click();
+  }, 180);
+}
+
+// ─── File processing — resize + HEIC → JPEG ──────────────
+function processImageFile(f) {
   if (!f) return;
-  imgMime = f.type || 'image/jpeg';
   var r = new FileReader();
   r.onload = function(ev) {
-    img64 = ev.target.result.split(',')[1];
-    var dz = document.getElementById('dz');
-    dz.classList.add('filled');
-    document.getElementById('preview-photo').src = ev.target.result;
-    var token = window._token || sessionStorage.getItem('food_token') || '';
-    if (token.length > 8) document.getElementById('startBtn').disabled = false;
+    var img = new Image();
+    img.onload = function() {
+      // Dimensions cibles selon format choisi
+      var maxW = 1280, maxH = 1280;
+      if (selectedFormat === '16:9') { maxW = 1280; maxH = 720; }
+      else if (selectedFormat === '1:1') { maxW = 1080; maxH = 1080; }
+      else { maxW = 720; maxH = 1280; } // 9:16
+
+      var w = img.width, h = img.height;
+      var ratio = Math.min(maxW / w, maxH / h, 1);
+      var tw = Math.round(w * ratio);
+      var th = Math.round(h * ratio);
+
+      var canvas = document.createElement('canvas');
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, tw, th);
+
+      var dataURL = canvas.toDataURL('image/jpeg', 0.88);
+      img64 = dataURL.split(',')[1];
+      imgMime = 'image/jpeg';
+
+      var dz = document.getElementById('dz');
+      dz.classList.add('filled');
+      document.getElementById('preview-photo').src = dataURL;
+
+      var token = window._token || sessionStorage.getItem('food_token') || '';
+      if (token.length > 8) document.getElementById('startBtn').disabled = false;
+    };
+    img.src = ev.target.result;
   };
   r.readAsDataURL(f);
+}
+
+['camera','gallery','files'].forEach(function(src) {
+  document.getElementById('fi-' + src).addEventListener('change', function(e) {
+    processImageFile(e.target.files[0]);
+    this.value = ''; // reset pour re-sélection possible
+  });
 });
 
+// Drag & drop desktop
 var dz = document.getElementById('dz');
 dz.addEventListener('dragover', function(e) { e.preventDefault(); });
 dz.addEventListener('drop', function(e) {
   e.preventDefault();
   var f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) {
-    document.getElementById('fi').files = e.dataTransfer.files;
-    document.getElementById('fi').dispatchEvent(new Event('change'));
+  if (f && (f.type.startsWith('image/') || f.name.match(/\.(heic|heif)$/i))) {
+    processImageFile(f);
   }
 });
 
@@ -1178,7 +1449,7 @@ function resetAll() {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('ci').disabled = true;
   document.getElementById('sbtn').disabled = true;
-  document.getElementById('fi').value = '';
+  ['camera','gallery','files'].forEach(function(s){ var el=document.getElementById('fi-'+s); if(el) el.value=''; });
   setbusy(false);
 }
 

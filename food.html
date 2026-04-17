@@ -273,6 +273,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;color:var(--text);backgrou
           <div class="session-info-sub" id="session-sub">Analyse en cours…</div>
         </div>
         <div class="led" id="led2"></div>
+        <div id="session-timer" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:.08em;min-width:36px;text-align:right;">0:00</div>
         <button class="cancel-btn" onclick="cancelSession()">✕ Annuler</button>
       </div>
       <div class="session-content" id="session-content"></div>
@@ -317,16 +318,20 @@ window.addEventListener('load',function(){
 /* ── STATE ── */
 var img64=null,imgMime='image/jpeg',selectedFormat='9:16';
 var _styles=null,_styleIdx=-1,_angles=null;
+var _hdBriefs=null,_montageBriefs=null;
 var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
+var _sessionStart=null,_timerInterval=null;
 
 function tok(){return window._token||sessionStorage.getItem('food_token')||'';}
 
 function resetState(){
   img64=null;imgMime='image/jpeg';
   _styles=null;_styleIdx=-1;_angles=null;
+  _hdBriefs=null;_montageBriefs=null;
   _hdResults=[null,null,null];_vidResults=[null,null,null];
   _aborted=false;
+  if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}_sessionStart=null;
   document.getElementById('session-content').innerHTML='';
   document.getElementById('session-screen').classList.remove('active');
   document.getElementById('upload-screen').classList.remove('hidden');
@@ -400,12 +405,21 @@ function startSession(){
   wrap.id='analyse-wrap';wrap.className='analyse-wrap';
   wrap.innerHTML='<div class="analyse-dots"><div class="analyse-dot"></div><div class="analyse-dot"></div><div class="analyse-dot"></div></div><div class="analyse-txt">Le DA analyse votre plat…</div>';
   sc.appendChild(wrap);
+  _sessionStart=Date.now();
+  if(_timerInterval)clearInterval(_timerInterval);
+  _timerInterval=setInterval(function(){
+    if(!_sessionStart)return;
+    var s=Math.floor((Date.now()-_sessionStart)/1000);
+    var m=Math.floor(s/60);var ss=s%60;
+    var el=document.getElementById('session-timer');
+    if(el)el.textContent=m+':'+(ss<10?'0':'')+ss;
+  },1000);
   callGeminiStyles();
 }
 
 /* ── PHASE 1 : Gemini styles ── */
 function callGeminiStyles(){
-  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et propose 3 ambiances visuelles différentes. Réponds uniquement avec le JSON phase 1a.'}]}];
+  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et génère le brief complet : 3 styles, prompts HD et prompts vidéo pour chaque style.'}]}];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
   .then(function(r){
     return r.json().then(function(d){
@@ -421,7 +435,13 @@ function callGeminiStyles(){
       var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();
       c=c.slice(c.indexOf('{'));
       var b=JSON.parse(c);
-      if(b.phase==='1a'&&b.styles&&b.styles.length===3){_styles=b.styles;showStylePreviews(b.styles);return;}
+      if(b.phase==='1a'&&b.styles&&b.styles.length===3){
+        _styles=b.styles;
+        _hdBriefs=b.hd||null;
+        _montageBriefs=b.montage||null;
+        showStylePreviews(b.styles);
+        return;
+      }
     }catch(e){}
     showError('Réponse DA inattendue. Réessayez.',callGeminiStyles);
   })
@@ -488,46 +508,16 @@ function selectStyle(idx){
     if(i===idx)c.classList.add('selected');else c.classList.add('dimmed');
   }
   document.getElementById('session-sub').textContent='Production en cours…';
-  callGeminiHD(idx);
-}
-
-/* ── PHASE 2 : Gemini HD ── */
-function callGeminiHD(styleIdx){
-  var s=_styles[styleIdx];
-  var history=[
-    {role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Voici mon produit.'}]},
-    {role:'model',parts:[{text:'Style : '+s.name+'.\n===BRIEF===\n{"phase":"1a","styles":[{"name":"'+s.name+'","desc":"'+(s.desc||'')+'","prompt":"'+s.prompt.replace(/"/g,'\\"')+'"}]}'}]},
-    {role:'user',parts:[{text:'Je choisis '+s.name+'. Génère les 3 images HD — JSON phase 1.'}]}
-  ];
   initProdSection('Images HD…',0);
-  fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
-  .then(function(r){
-    return r.json().then(function(d){
-      if(!r.ok){
-        var msg=d.detail||d.error||('Erreur '+r.status);
-        if(r.status===503)throw new Error('503:'+msg);
-        throw new Error(msg);
-      }
-      return d;
-    });
-  })
-  .then(function(d){
-    if(_aborted)return;
-    if(d.status!=='ok'||!d.brief){showProdError('Erreur DA HD.',function(){callGeminiHD(styleIdx);});return;}
-    try{
-      var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();c=c.slice(c.indexOf('{'));
-      var b=JSON.parse(c);
-      if(b.phase===1){_angles=b;launchHD(b);return;}
-    }catch(e){}
-    showProdError('Réponse DA inattendue.',function(){callGeminiHD(styleIdx);});
-  })
-  .catch(function(e){
-    if(_aborted)return;
-    var msg=e.message||'';
-    if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(function(){callGeminiHD(styleIdx);},3000);return;}
-    if(msg.startsWith('503:')){showProdError(msg.slice(4),function(){callGeminiHD(styleIdx);});return;}
-    showProdError(msg||'Erreur réseau HD.',function(){callGeminiHD(styleIdx);});
-  });
+  // Utiliser le brief déjà reçu de Gemini
+  if(_hdBriefs&&_hdBriefs[idx]){
+    _angles=_hdBriefs[idx];
+    launchHD(_hdBriefs[idx]);
+  }else{
+    // Fallback : prompts depuis le style preview
+    var s=_styles[idx];
+    launchHD({mode:'angles',prompt_1:s.prompt,prompt_2:s.prompt,prompt_3:s.prompt});
+  }
 }
 
 /* ── Init section production ── */
@@ -663,40 +653,18 @@ function addVidGrid(){
   var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
 }
 
-/* ── PHASE 3 : Gemini vidéo ── */
+/* ── PHASE 3 : Montage vidéo (brief déjà dispo) ── */
 function callGeminiVideo(){
-  var s=_styles[_styleIdx];
-  var history=[
-    {role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Voici mon produit.'}]},
-    {role:'model',parts:[{text:'Style : '+s.name+'.'}]},
-    {role:'user',parts:[{text:'Images HD générées. Propose le montage vidéo — JSON phase 2.'}]}
+  var fallback=[
+    {angle:0,prompt:'cinematic slow zoom, warm golden light, food commercial'},
+    {angle:1,prompt:'overhead rotation, dramatic lighting, product reveal'},
+    {angle:2,prompt:'dolly back reveal, depth of field, luxury food ad'}
   ];
-  var fallback=[{angle:0,prompt:'cinematic slow zoom, warm golden light, food commercial'},{angle:1,prompt:'overhead rotation, dramatic lighting, product reveal'},{angle:2,prompt:'dolly back reveal, depth of field, luxury food ad'}];
-  fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
-  .then(function(r){
-    return r.json().then(function(d){
-      if(!r.ok){throw new Error(d.detail||d.error||('Erreur '+r.status));}
-      return d;
-    });
-  })
-  .then(function(d){
-    if(_aborted)return;
-    if(d.status==='ok'&&d.brief){
-      try{
-        var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();c=c.slice(c.indexOf('{'));
-        var b=JSON.parse(c);if(b.phase===2&&b.montage){launchVideo(b.montage);return;}
-      }catch(e){}
-    }
+  if(_montageBriefs&&_montageBriefs[_styleIdx]&&_montageBriefs[_styleIdx].clips){
+    launchVideo(_montageBriefs[_styleIdx].clips);
+  }else{
     launchVideo(fallback);
-  })
-  .catch(function(e){
-    if(_aborted)return;
-    var msg=e.message||'';
-    if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(callGeminiVideo,3000);return;}
-    // Sur 503 on affiche le message puis on réessaie après 5s
-    setProgress(1,msg||'Erreur service IA.');
-    setTimeout(callGeminiVideo,5000);
-  });
+  }
 }
 
 /* ── Génération vidéos (batch) ── */

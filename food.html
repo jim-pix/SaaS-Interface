@@ -1130,15 +1130,22 @@ function callDA() {
     setbusy(false);
   })
   .catch(function(e) {
-    var isSurcharge = e.message === 'surcharge' || e.message === 'quota';
-    var msg = e.message === 'quota' ? 'Quota de requêtes DA dépassé, contactez le SAV.' 
-            : e.message === 'surcharge' ? 'Le service IA est momentanément surchargé.' 
-            : 'Erreur réseau : ' + e.message;
+    var msg = e.message || '';
+    // "Load failed" = Safari iOS a coupé le fetch — retry silencieux
+    if (msg === 'Load failed' || msg === 'Failed to fetch' || msg === 'NetworkError') {
+      console.log('[DA] Network error, retrying in 3s...', msg);
+      setTimeout(function() { callDA(); }, 3000);
+      return;
+    }
+    var isSurcharge = msg === 'surcharge' || msg === 'quota';
+    var displayMsg = msg === 'quota' ? 'Quota de requêtes DA dépassé, contactez le SAV.'
+            : msg === 'surcharge' ? 'Le service IA est momentanément surchargé.'
+            : 'Erreur réseau : ' + msg;
     if (isSurcharge) {
       var retryId = 'retry-' + Date.now();
-      addMsg('a', msg + ' <button id="' + retryId + '" onclick="retryDA(\'' + retryId + '\')" style="margin-left:8px;padding:4px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;">↺ Réessayer</button>');
+      addMsg('a', displayMsg + ' <button id="' + retryId + '" onclick="retryDA(\'' + retryId + '\')" style="margin-left:8px;padding:4px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;">↺ Réessayer</button>');
     } else {
-      addMsg('a', msg);
+      addMsg('a', displayMsg);
     }
     setbusy(false);
   });
@@ -1615,24 +1622,38 @@ function generateHDAngles(brief) {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.status === 'queued' && d.job_id) {
+        // Mettre à jour le statut dans la cellule
+        var cell0 = document.getElementById('hd-' + containerId + '-' + idx);
+        if (cell0) {
+          var statusEl = cell0.querySelector('div:last-child div:last-child');
+          if (statusEl) statusEl.textContent = 'en cours…';
+        }
         pollImage(d.job_id, 0, function(imageB64, err) {
           var cell = document.getElementById('hd-' + containerId + '-' + idx);
           if (imageB64) {
+            console.log('[HD angle ' + idx + '] image reçue, taille:', imageB64.length);
             window._hdAngles.results[idx] = imageB64;
             if (idx === 0) lastGeneratedImg64 = imageB64;
             if (cell) {
-              // Blob URL pour éviter le bug Safari mobile avec les grosses base64 en innerHTML
-              var bytes = atob(imageB64);
-              var arr = new Uint8Array(bytes.length);
-              for (var j = 0; j < bytes.length; j++) arr[j] = bytes.charCodeAt(j);
-              var blobUrl = URL.createObjectURL(new Blob([arr], {type: 'image/png'}));
-              cell.innerHTML = '<img src="' + blobUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="selectHDAngle(' + idx + ',\'' + containerId + '\')">' +
+              // Blob URL — contourne le bug Safari iOS avec les grosses data:URI en innerHTML
+              try {
+                var bytes = atob(imageB64);
+                var arr = new Uint8Array(bytes.length);
+                for (var j = 0; j < bytes.length; j++) arr[j] = bytes.charCodeAt(j);
+                var blobUrl = URL.createObjectURL(new Blob([arr], {type: 'image/png'}));
+                cell.innerHTML = '<img src="' + blobUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="selectHDAngle(' + idx + ',\'' + containerId + '\')">' +
                 '<div style="position:absolute;bottom:0;left:0;right:0;padding:6px;background:linear-gradient(to top,rgba(0,0,0,.75),transparent);">' +
                 '<div style="font-family:\'DM Mono\',monospace;font-size:8px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;">' + angles[idx].label + '</div>' +
                 '</div>' +
                 '<div id="hd-sel-' + containerId + '-' + idx + '" style="display:none;position:absolute;top:6px;right:6px;background:var(--accent);color:#0c0c0a;font-family:\'DM Mono\',monospace;font-size:8px;padding:2px 6px;letter-spacing:.06em;">✓ SÉLECTIONNÉE</div>';
+              } catch(blobErr) {
+                // Fallback data URI si Blob échoue
+                console.log('[HD angle ' + idx + '] blob failed, fallback data URI:', blobErr);
+                cell.innerHTML = '<img src="data:image/png;base64,' + imageB64 + '" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="selectHDAngle(' + idx + ',\'' + containerId + '\')"><div id="hd-sel-' + containerId + '-' + idx + '" style="display:none;position:absolute;top:6px;right:6px;background:var(--accent);color:#0c0c0a;font-family:\'DM Mono\',monospace;font-size:8px;padding:2px 6px;letter-spacing:.06em;">✓ SÉLECTIONNÉE</div>';
+              }
             }
           } else {
+            console.log('[HD angle ' + idx + '] erreur:', err);
             if (cell) cell.innerHTML = '<div style="font-size:9px;color:var(--red);text-align:center;padding:8px;">' + (err || 'Erreur') + '</div>';
           }
           runAngle(idx + 1);
@@ -1671,21 +1692,31 @@ function retryLastCall() {
 
 // ─── Polling image result ─────────────────────────────────
 function pollImage(jobId, attempt, onDone) {
-  if (attempt > 120) { onDone(null, 'Timeout génération image'); return; }
+  // Max 40 tentatives × 8s = ~5min max
+  if (attempt > 40) { onDone(null, 'Timeout génération image'); return; }
+  // Délai croissant : 3s, puis 8s — réduit le nombre de fetch sur Safari iOS
+  var delay = attempt === 0 ? 3000 : 8000;
   setTimeout(function() {
     fetch(SERVER + '/food/image_result', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': (window._token || sessionStorage.getItem('food_token') || '') },
       body: JSON.stringify({ job_id: jobId })
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(d) {
       if (d.status === 'ok' && d.image) { onDone(d.image, null); }
       else if (d.status === 'processing') { pollImage(jobId, attempt + 1, onDone); }
       else { onDone(null, d.error || 'Erreur RunPod'); }
     })
-    .catch(function() { pollImage(jobId, attempt + 1, onDone); });
-  }, attempt === 0 ? 3000 : 5000);
+    .catch(function(e) {
+      // Erreur réseau (Safari iOS) — on retente sans compter comme un vrai échec
+      console.log('[pollImage] retry after network error:', e.message);
+      pollImage(jobId, attempt + 1, onDone);
+    });
+  }, delay);
 }
 
 // ─── Generate 3 style previews en parallèle ──────────────

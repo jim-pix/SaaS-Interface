@@ -372,6 +372,8 @@ function processImageFile(f){
       document.getElementById('dz').classList.add('filled');
       document.getElementById('preview-photo').src=dataURL;
       document.getElementById('startBtn').disabled=false;
+      // Warm-up RunPod dès que l'image est prête
+      fetch(SERVER+'/food/warmup',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()}}).catch(function(){});
     };
     img.src=ev.target.result;
   };
@@ -557,49 +559,68 @@ function showProdError(msg,retry){
   btn.onclick=function(){btn.remove();retry();};block.appendChild(btn);
 }
 
-/* ── Génération HD ── */
+/* ── Génération HD (batch) ── */
 function launchHD(brief){
   var isDressage=brief.mode==='dressage';
   var labels=isDressage?['Base','Mi-dressage','Final']:['3/4 Frontal','Overhead','Latéral'];
-  var prompts=[brief.prompt_1,brief.prompt_2,brief.prompt_3];
-  var angs=prompts.map(function(p,i){return{label:labels[i],prompt:p};}).filter(function(a){return a.prompt;});
+  var prompts=[brief.prompt_1,brief.prompt_2,brief.prompt_3].filter(function(p){return p;});
   setProgress(0,'Génération images HD…');
 
-  function runHD(idx){
-    if(_aborted||idx>=angs.length){
-      // Toutes les HD → vidéos
-      setProgress(1,'Préparation vidéos…');
-      addVidGrid();
-      callGeminiVideo();
-      return;
+  fetch(SERVER+'/food/generate_batch',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
+    body:JSON.stringify({image:img64,prompts:prompts,angles:[0,1,2],mode:brief.mode||'angles'})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(function(d){
+    if(_aborted)return;
+    if(d.status==='queued'&&d.job_id){
+      pollBatch(d.job_id,0,labels);
+    }else{
+      setProgress(0,'Erreur lancement HD');
     }
-    var lbl=document.getElementById('hd-lbl-'+idx);if(lbl)lbl.textContent=angs[idx].label+'…';
-    fetch(SERVER+'/food/generate',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-      body:JSON.stringify({image:img64,prompt:angs[idx].prompt,angle:isDressage?0:idx,mode:brief.mode||'angles'})})
-    .then(function(r){return r.json();})
+  })
+  .catch(function(e){
+    if(!_aborted)setProgress(0,'Erreur réseau: '+(e.message||''));
+  });
+}
+
+function pollBatch(jobId,attempt,labels){
+  if(attempt>80){setProgress(0,'Timeout HD');return;}
+  setTimeout(function(){
+    if(_aborted)return;
+    fetch(SERVER+'/food/batch_result',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({job_id:jobId})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(d){
       if(_aborted)return;
-      if(d.status==='queued'&&d.job_id){
-        pollImage(d.job_id,0,function(b64,err){
-          if(_aborted)return;
-          var card=document.getElementById('hd-card-'+idx),lbl=document.getElementById('hd-lbl-'+idx);
-          if(b64&&card){
-            _hdResults[idx]=b64;
-            var blobUrl=b64toBlob(b64,'image/png');
-            var iidx=idx;
+      if(d.status==='ok'&&d.images){
+        d.images.forEach(function(img,i){
+          var card=document.getElementById('hd-card-'+i);
+          if(!card)return;
+          if(img&&img.image){
+            _hdResults[i]=img.image;
+            var blobUrl=b64toBlob(img.image,'image/png');
+            var iidx=i;
             card.innerHTML='<img src="'+blobUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="selectHD('+iidx+')">'+
-              '<div class="prod-card-label">'+angs[idx].label+'</div>'+
-              '<div id="hd-sel-'+idx+'" style="display:none;position:absolute;top:6px;right:6px;background:var(--accent);color:#0c0c0a;font-family:\'DM Mono\',monospace;font-size:8px;padding:2px 6px;">✓</div>';
+              '<div class="prod-card-label">'+labels[i]+'</div>'+
+              '<div id="hd-sel-'+i+'" style="display:none;position:absolute;top:6px;right:6px;background:var(--accent);color:#0c0c0a;font-family:\'DM Mono\',monospace;font-size:8px;padding:2px 6px;">✓</div>';
             card.classList.add('clickable');
-          }else{if(lbl)lbl.textContent=err||'erreur';}
-          runHD(idx+1);
+          }else{
+            card.innerHTML='<div class="prod-card-label">erreur</div>';
+          }
         });
-      }else{if(lbl)lbl.textContent='erreur';runHD(idx+1);}
+        var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
+        setProgress(1,'Préparation vidéos…');
+        addVidGrid();
+        callGeminiVideo();
+      }else if(d.status==='processing'){
+        setProgress(0,'Génération images HD… '+(attempt*8)+'s');
+        pollBatch(jobId,attempt+1,labels);
+      }else{
+        setProgress(0,'Erreur HD: '+(d.error||''));
+      }
     })
-    .catch(function(){if(!_aborted)runHD(idx+1);});
-  }
-  runHD(0);
+    .catch(function(){if(!_aborted)pollBatch(jobId,attempt+1,labels);});
+  },attempt===0?5000:8000);
 }
+
 
 function selectHD(idx){
   for(var i=0;i<3;i++){

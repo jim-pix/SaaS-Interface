@@ -407,7 +407,12 @@ function startSession(){
 function callGeminiStyles(){
   var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et propose 3 ambiances visuelles différentes. Réponds uniquement avec le JSON phase 1a.'}]}];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
-  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok){throw new Error(d.detail||d.error||('Erreur '+r.status));}
+      return d;
+    });
+  })
   .then(function(d){
     if(_aborted)return;
     var wrap=document.getElementById('analyse-wrap');if(wrap)wrap.remove();
@@ -423,8 +428,9 @@ function callGeminiStyles(){
   .catch(function(e){
     if(_aborted)return;
     var wrap=document.getElementById('analyse-wrap');if(wrap)wrap.remove();
-    if((e.message||'')==='Load failed'||(e.message||'')==='Failed to fetch'){setTimeout(callGeminiStyles,3000);return;}
-    showError('Erreur réseau. Réessayez.',callGeminiStyles);
+    var msg=e.message||'';
+    if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(callGeminiStyles,3000);return;}
+    showError(msg||'Erreur réseau. Réessayez.',callGeminiStyles);
   });
 }
 
@@ -495,7 +501,16 @@ function callGeminiHD(styleIdx){
   ];
   initProdSection('Images HD…',0);
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
-  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok){
+        var msg=d.detail||d.error||('Erreur '+r.status);
+        if(r.status===503)throw new Error('503:'+msg);
+        throw new Error(msg);
+      }
+      return d;
+    });
+  })
   .then(function(d){
     if(_aborted)return;
     if(d.status!=='ok'||!d.brief){showProdError('Erreur DA HD.',function(){callGeminiHD(styleIdx);});return;}
@@ -508,8 +523,10 @@ function callGeminiHD(styleIdx){
   })
   .catch(function(e){
     if(_aborted)return;
-    if((e.message||'')==='Load failed'||(e.message||'')==='Failed to fetch'){setTimeout(function(){callGeminiHD(styleIdx);},3000);return;}
-    showProdError('Erreur réseau HD.',function(){callGeminiHD(styleIdx);});
+    var msg=e.message||'';
+    if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(function(){callGeminiHD(styleIdx);},3000);return;}
+    if(msg.startsWith('503:')){showProdError(msg.slice(4),function(){callGeminiHD(styleIdx);});return;}
+    showProdError(msg||'Erreur réseau HD.',function(){callGeminiHD(styleIdx);});
   });
 }
 

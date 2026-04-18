@@ -293,6 +293,7 @@ function doAuth(){
   err.textContent='Vérification…';
   fetch(SERVER+'/food/ping',{headers:{'X-Api-Token':token}})
   .then(function(r){if(r.status===401||r.status===403)throw new Error('Token invalide');if(!r.ok)throw new Error('Erreur serveur');return r.json();})
+  .then(function(){sessionStorage.setItem('food_token',token);err.textContent='';showMain(token);})
   .then(function(){sessionStorage.setItem('food_token',token);localStorage.setItem('food_token',token);err.textContent='';showMain(token);})
   .catch(function(e){err.textContent=e.message||'Token invalide';});
 }
@@ -304,6 +305,7 @@ function showMain(token){
   document.getElementById('led2').classList.add('on');
 }
 function doLogout(){
+  sessionStorage.clear();
   sessionStorage.clear();localStorage.removeItem('food_token');
   resetState();
   document.getElementById('page-main').classList.add('hidden');
@@ -311,6 +313,7 @@ function doLogout(){
   document.getElementById('tokenInput').value='';
 }
 window.addEventListener('load',function(){
+  var t=sessionStorage.getItem('food_token');
   var t=sessionStorage.getItem('food_token')||localStorage.getItem('food_token');
   if(t){document.getElementById('tokenInput').value=t;showMain(t);}
 });
@@ -323,6 +326,7 @@ var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
 var _sessionStart=null,_timerInterval=null;
 
+function tok(){return window._token||sessionStorage.getItem('food_token')||'';}
 function tok(){return window._token||sessionStorage.getItem('food_token')||localStorage.getItem('food_token')||'';}
 
 function resetState(){
@@ -477,35 +481,27 @@ function showStylePreviews(styles){
 
 function genPreview(styles,idx){
   if(_aborted||idx>=styles.length)return;
-  // Prompt d'ambiance générique — pas de plat client, juste l'atmosphère du style
-  var ambiancePrompt='Food photography scene, no dish, empty setting: '+styles[idx].prompt.replace(/KEEP IDENTICAL[^.]*\./gi,'').replace(/REPLACE EVERYTHING ELSE[^:]*:/gi,'').trim()+' — atmospheric, editorial, 9:16 vertical';
-  fetch(SERVER+'/food/da/imggen',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({prompt:ambiancePrompt})})
+  fetch(SERVER+'/food/generate',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({image:img64,prompt:styles[idx].prompt,preview:true})})
   .then(function(r){return r.json();})
   .then(function(d){
     if(_aborted)return;
-    var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
-    if(d.status==='ok'&&d.image_b64&&card){
-      var mime=d.mime_type||'image/png';
-      var blobUrl=b64toBlob(d.image_b64,mime);
-      var img=document.createElement('img');img.src=blobUrl;
-      img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-      var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
-      if(st)st.style.display='none';
-      card.dataset.ready='1';card.classList.remove('no-ready');
-    }else{
-      // Fallback : rendre la card cliquable quand même
-      if(st)st.textContent='';
-      card.dataset.ready='1';card.classList.remove('no-ready');
-    }
-    genPreview(styles,idx+1);
+    if(d.status==='queued'&&d.job_id){
+      pollImage(d.job_id,0,function(b64,err){
+        if(_aborted)return;
+        var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
+        if(b64&&card){
+          var blobUrl=b64toBlob(b64,'image/png');
+          var img=document.createElement('img');img.src=blobUrl;
+          img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+          var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
+          if(st)st.style.display='none';
+          card.dataset.ready='1';card.classList.remove('no-ready');
+        }else{if(st)st.textContent=err||'erreur';}
+        genPreview(styles,idx+1);
+      });
+    }else{genPreview(styles,idx+1);}
   })
-  .catch(function(){
-    if(_aborted)return;
-    var card=document.getElementById('pc-'+idx);
-    if(card){card.dataset.ready='1';card.classList.remove('no-ready');}
-    genPreview(styles,idx+1);
-  });
+  .catch(function(){if(!_aborted)genPreview(styles,idx+1);});
 }
 
 function selectStyle(idx){

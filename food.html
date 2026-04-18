@@ -477,27 +477,35 @@ function showStylePreviews(styles){
 
 function genPreview(styles,idx){
   if(_aborted||idx>=styles.length)return;
-  fetch(SERVER+'/food/generate',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({image:img64,prompt:styles[idx].prompt,preview:true})})
+  // Prompt d'ambiance générique — pas de plat client, juste l'atmosphère du style
+  var ambiancePrompt='Food photography scene, no dish, empty setting: '+styles[idx].prompt.replace(/KEEP IDENTICAL[^.]*\./gi,'').replace(/REPLACE EVERYTHING ELSE[^:]*:/gi,'').trim()+' — atmospheric, editorial, 9:16 vertical';
+  fetch(SERVER+'/food/da/imggen',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
+    body:JSON.stringify({prompt:ambiancePrompt})})
   .then(function(r){return r.json();})
   .then(function(d){
     if(_aborted)return;
-    if(d.status==='queued'&&d.job_id){
-      pollImage(d.job_id,0,function(b64,err){
-        if(_aborted)return;
-        var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
-        if(b64&&card){
-          var blobUrl=b64toBlob(b64,'image/png');
-          var img=document.createElement('img');img.src=blobUrl;
-          img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-          var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
-          if(st)st.style.display='none';
-          card.dataset.ready='1';card.classList.remove('no-ready');
-        }else{if(st)st.textContent=err||'erreur';}
-        genPreview(styles,idx+1);
-      });
-    }else{genPreview(styles,idx+1);}
+    var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
+    if(d.status==='ok'&&d.image_b64&&card){
+      var mime=d.mime_type||'image/png';
+      var blobUrl=b64toBlob(d.image_b64,mime);
+      var img=document.createElement('img');img.src=blobUrl;
+      img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+      var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
+      if(st)st.style.display='none';
+      card.dataset.ready='1';card.classList.remove('no-ready');
+    }else{
+      // Fallback : rendre la card cliquable quand même
+      if(st)st.textContent='';
+      card.dataset.ready='1';card.classList.remove('no-ready');
+    }
+    genPreview(styles,idx+1);
   })
-  .catch(function(){if(!_aborted)genPreview(styles,idx+1);});
+  .catch(function(){
+    if(_aborted)return;
+    var card=document.getElementById('pc-'+idx);
+    if(card){card.dataset.ready='1';card.classList.remove('no-ready');}
+    genPreview(styles,idx+1);
+  });
 }
 
 function selectStyle(idx){

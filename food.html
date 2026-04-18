@@ -293,7 +293,7 @@ function doAuth(){
   err.textContent='Vérification…';
   fetch(SERVER+'/food/ping',{headers:{'X-Api-Token':token}})
   .then(function(r){if(r.status===401||r.status===403)throw new Error('Token invalide');if(!r.ok)throw new Error('Erreur serveur');return r.json();})
-  .then(function(){sessionStorage.setItem('food_token',token);err.textContent='';showMain(token);})
+  .then(function(){sessionStorage.setItem('food_token',token);localStorage.setItem('food_token',token);err.textContent='';showMain(token);})
   .catch(function(e){err.textContent=e.message||'Token invalide';});
 }
 function showMain(token){
@@ -304,14 +304,14 @@ function showMain(token){
   document.getElementById('led2').classList.add('on');
 }
 function doLogout(){
-  sessionStorage.clear();
+  sessionStorage.clear();localStorage.removeItem('food_token');
   resetState();
   document.getElementById('page-main').classList.add('hidden');
   document.getElementById('page-auth').classList.remove('hidden');
   document.getElementById('tokenInput').value='';
 }
 window.addEventListener('load',function(){
-  var t=sessionStorage.getItem('food_token');
+  var t=sessionStorage.getItem('food_token')||localStorage.getItem('food_token');
   if(t){document.getElementById('tokenInput').value=t;showMain(t);}
 });
 
@@ -323,7 +323,7 @@ var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
 var _sessionStart=null,_timerInterval=null;
 
-function tok(){return window._token||sessionStorage.getItem('food_token')||'';}
+function tok(){return window._token||sessionStorage.getItem('food_token')||localStorage.getItem('food_token')||'';}
 
 function resetState(){
   img64=null;imgMime='image/jpeg';

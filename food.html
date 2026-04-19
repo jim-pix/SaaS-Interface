@@ -313,10 +313,123 @@ function doLogout(){
 }
 window.addEventListener('load',function(){
   var t=sessionStorage.getItem('food_token')||localStorage.getItem('food_token');
-  if(t){document.getElementById('tokenInput').value=t;showMain(t);}
+  if(t){document.getElementById('tokenInput').value=t;showMain(t);checkResumeSession();}
 });
 
-/* ── STATE ── */
+/* ── PERSISTANCE SESSION ── */
+var SESSION_KEY='food_da_session';
+
+function saveSession(extra){
+  try{
+    var state={
+      version:1,
+      timestamp:Date.now(),
+      status:'active',
+      img64:img64,
+      imgMime:imgMime,
+      styles:_styles,
+      styleIdx:_styleIdx,
+      hdBriefs:_hdBriefs,
+      montageBriefs:_montageBriefs,
+      hdResults:_hdResults,
+      sessionStart:_sessionStart
+    };
+    if(extra)Object.assign(state,extra);
+    localStorage.setItem(SESSION_KEY,JSON.stringify(state));
+  }catch(e){console.warn('saveSession:',e);}
+}
+
+function clearSession(){
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function markSessionComplete(){
+  try{
+    var s=JSON.parse(localStorage.getItem(SESSION_KEY)||'{}');
+    s.status='completed';
+    s.completedAt=Date.now();
+    localStorage.setItem(SESSION_KEY,JSON.stringify(s));
+  }catch(e){}
+}
+
+function loadSession(){
+  try{
+    var s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+    if(!s||s.status==='completed')return null;
+    // Expirer après 2h
+    if(Date.now()-s.timestamp>2*60*60*1000){clearSession();return null;}
+    return s;
+  }catch(e){return null;}
+}
+
+function checkResumeSession(){
+  var s=loadSession();
+  if(!s||!s.img64)return;
+  // Afficher bannière de reprise
+  var banner=document.createElement('div');
+  banner.id='resume-banner';
+  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:500;background:#0d1e2e;border-top:1px solid var(--accent-dim);padding:16px;display:flex;flex-direction:column;gap:10px;';
+  var d=new Date(s.timestamp);
+  var dateStr=(d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+' '+d.getHours()+'h'+(d.getMinutes()<10?'0':'')+d.getMinutes();
+  banner.innerHTML='<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:var(--accent);">Session en cours</div>'+
+    '<div style="font-family:\'DM Mono\',monospace;font-size:9px;color:var(--text-dim);letter-spacing:.1em;">Démarrée le '+dateStr+'</div>'+
+    '<div style="display:flex;gap:8px;">'+
+    '<button onclick="resumeSession()" style="flex:1;background:var(--accent);color:#0f1c28;border:none;padding:12px;font-family:\'DM Sans\',sans-serif;font-size:12px;font-weight:500;cursor:pointer;">Reprendre</button>'+
+    '<button onclick="discardSession()" style="flex:1;background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:12px;font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:.1em;cursor:pointer;">Nouvelle session</button>'+
+    '</div>';
+  document.body.appendChild(banner);
+}
+
+function discardSession(){
+  clearSession();
+  var b=document.getElementById('resume-banner');if(b)b.remove();
+}
+
+function resumeSession(){
+  var b=document.getElementById('resume-banner');if(b)b.remove();
+  var s=loadSession();
+  if(!s||!s.img64)return;
+  // Restaurer l'état
+  img64=s.img64;imgMime=s.imgMime||'image/jpeg';
+  _styles=s.styles;_styleIdx=s.styleIdx||-1;
+  _hdBriefs=s.hdBriefs;_montageBriefs=s.montageBriefs;
+  _hdResults=s.hdResults||[null,null,null];
+  _sessionStart=s.sessionStart||Date.now();
+  _aborted=false;
+  // Afficher l'écran session
+  document.getElementById('upload-screen').classList.add('hidden');
+  document.getElementById('session-screen').classList.add('active');
+  document.getElementById('session-thumb').src='data:image/jpeg;base64,'+img64;
+  document.getElementById('session-content').innerHTML='';
+  // Relancer le timer
+  if(_timerInterval)clearInterval(_timerInterval);
+  _timerInterval=setInterval(function(){
+    if(!_sessionStart)return;
+    var sec=Math.floor((Date.now()-_sessionStart)/1000);
+    var m=Math.floor(sec/60);var ss=sec%60;
+    var el=document.getElementById('session-timer');
+    if(el)el.textContent=m+':'+(ss<10?'0':'')+ss;
+  },1000);
+  // Reprendre au bon endroit
+  if(_styleIdx>=0&&_styles){
+    // Styles déjà choisis — reconstruire l'UI styles
+    showStylePreviews(_styles);
+    // Puis relancer depuis la sélection de style
+    setTimeout(function(){selectStyle(_styleIdx);},300);
+  }else if(_styles){
+    showStylePreviews(_styles);
+    document.getElementById('session-sub').textContent='Choisissez une ambiance';
+  }else{
+    // Reprendre depuis l'analyse
+    var wrap=document.createElement('div');
+    wrap.id='analyse-wrap';wrap.className='analyse-wrap';
+    wrap.innerHTML='<div class="analyse-dots"><div class="analyse-dot"></div><div class="analyse-dot"></div><div class="analyse-dot"></div></div><div class="analyse-txt">Le DA analyse votre plat…</div>';
+    document.getElementById('session-content').appendChild(wrap);
+    callGeminiStyles();
+  }
+}
+
+
 var img64=null,imgMime='image/jpeg',selectedFormat='9:16';
 var _styles=null,_styleIdx=-1,_angles=null;
 var _hdBriefs=null,_montageBriefs=null;
@@ -333,6 +446,7 @@ function resetState(){
   _hdResults=[null,null,null];_vidResults=[null,null,null];
   _aborted=false;
   if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}_sessionStart=null;
+  clearSession();
   document.getElementById('session-content').innerHTML='';
   document.getElementById('session-screen').classList.remove('active');
   document.getElementById('upload-screen').classList.remove('hidden');
@@ -440,6 +554,7 @@ function callGeminiStyles(){
         _styles=b.styles;
         _hdBriefs=b.hd||null;
         _montageBriefs=b.montage||null;
+        saveSession();
         showStylePreviews(b.styles);
         return;
       }
@@ -539,6 +654,7 @@ function selectStyle(idx){
     if(i===idx)c.classList.add('selected');else c.classList.add('dimmed');
   }
   document.getElementById('session-sub').textContent='Production en cours…';
+  saveSession({styleIdx:idx});
   initProdSection('Images HD…',0);
   // Utiliser le brief déjà reçu de Gemini
   if(_hdBriefs&&_hdBriefs[idx]){
@@ -645,6 +761,7 @@ function pollBatch(jobId,attempt,labels){
           }
         });
         var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
+        saveSession({hdResults:_hdResults});
         setProgress(1,'Préparation vidéos…');
         addVidGrid();
         callGeminiVideo();
@@ -801,6 +918,7 @@ function showFinalResult(videoB64, videoUrl){
   nw.onclick=resetState;block.appendChild(nw);
   sc.appendChild(block);
   document.getElementById('session-sub').textContent='Terminé ✓';
+  markSessionComplete();
   sc.scrollTop=sc.scrollHeight;
 }
 

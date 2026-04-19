@@ -919,6 +919,7 @@ function showFinalResult(videoB64, videoUrl){
   sc.appendChild(block);
   document.getElementById('session-sub').textContent='Terminé ✓';
   markSessionComplete();
+  if(navigator.vibrate)navigator.vibrate([200,100,200]);
   sc.scrollTop=sc.scrollHeight;
 }
 

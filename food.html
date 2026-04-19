@@ -542,7 +542,7 @@ function startSession(){
 
 /* ── PHASE 1 : Gemini styles ── */
 function callGeminiStyles(){
-  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et génère le brief complet : 4 styles, prompts HD et prompts vidéo pour chaque style.'}]}];
+  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et propose 4 ambiances visuelles différentes. Réponds uniquement avec le JSON phase 1a.'}]}];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
   .then(function(r){
     return r.json().then(function(d){
@@ -563,7 +563,7 @@ function callGeminiStyles(){
         _hdBriefs=b.hd||null;
         _montageBriefs=b.montage||null;
         _dishName=b.dish_name||'Plat';
-        // Générer session ID : token-JJ-MM-AA-HHMM
+        // Générer session ID
         var now=new Date();
         var dd=String(now.getDate()).padStart(2,'0');
         var mm=String(now.getMonth()+1).padStart(2,'0');
@@ -666,7 +666,7 @@ function genPreview(styles,idx){
 
 function selectStyle(idx){
   _styleIdx=idx;
-  for(var i=0;i<3;i++){
+  for(var i=0;i<_styles.length;i++){
     var c=document.getElementById('pc-'+i);if(!c)continue;
     c.classList.remove('selected','dimmed');
     if(i===idx)c.classList.add('selected');else c.classList.add('dimmed');
@@ -674,15 +674,54 @@ function selectStyle(idx){
   document.getElementById('session-sub').textContent='Production en cours…';
   saveSession({styleIdx:idx});
   initProdSection('Images HD…',0);
-  // Utiliser le brief déjà reçu de Gemini
+  // Si on a déjà les briefs (reprise de session), lancer directement
   if(_hdBriefs&&_hdBriefs[idx]){
     _angles=_hdBriefs[idx];
     launchHD(_hdBriefs[idx]);
-  }else{
-    // Fallback : prompts depuis le style preview
-    var s=_styles[idx];
-    launchHD({mode:'angles',prompt_1:s.prompt,prompt_2:s.prompt,prompt_3:s.prompt});
+    return;
   }
+  // Appeler Gemini pour les briefs HD + vidéo du style choisi
+  var s=_styles[idx];
+  var history=[
+    {role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Voici mon produit.'}]},
+    {role:'model',parts:[{text:'J\'ai analysé votre plat et proposé ces styles : '+_styles.map(function(st){return st.name;}).join(', ')+'.'}]},
+    {role:'user',parts:[{text:'Je choisis le style "'+s.name+'". Génère les 3 prompts HD et les 3 prompts vidéo pour ce style. JSON avec "hd":{mode,prompt_1,prompt_2,prompt_3} et "montage":[{angle,prompt}x3].'}]}
+  ];
+  fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
+  .then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok)throw new Error(d.detail||d.error||('Erreur '+r.status));
+      return d;
+    });
+  })
+  .then(function(d){
+    if(_aborted)return;
+    if(d.status==='ok'&&d.brief){
+      try{
+        var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();
+        c=c.slice(c.indexOf('{'));
+        var b=JSON.parse(c);
+        var hd=b.hd||b;
+        var montage=b.montage||null;
+        if(!_hdBriefs)_hdBriefs=[];
+        if(!_montageBriefs)_montageBriefs=[];
+        _hdBriefs[idx]=hd;
+        if(montage)_montageBriefs[idx]={clips:montage};
+        _angles=hd;
+        saveSession({hdBriefs:_hdBriefs,montageBriefs:_montageBriefs});
+        launchHD(hd);
+        return;
+      }catch(e){}
+    }
+    // Fallback
+    launchHD({mode:'angles',prompt_1:s.prompt,prompt_2:s.prompt,prompt_3:s.prompt});
+  })
+  .catch(function(e){
+    if(_aborted)return;
+    var msg=e.message||'';
+    if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(function(){selectStyle(idx);},3000);return;}
+    showProdError(msg||'Erreur réseau.',function(){selectStyle(idx);});
+  });
 }
 
 /* ── Init section production ── */

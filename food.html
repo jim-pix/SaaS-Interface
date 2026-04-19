@@ -324,6 +324,8 @@ var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
 var _sessionStart=null,_timerInterval=null;
 var _dishName=null,_sessionId=null;
+var _runpodTimeMs=0;   // cumul temps jobs RunPod (images + vidéo)
+var _runpodJobStart=null; // timestamp début job en cours
 
 /* ── PERSISTANCE SESSION ── */
 var SESSION_KEY='food_da_session';
@@ -456,6 +458,7 @@ function resetState(){
   _aborted=false;
   if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}_sessionStart=null;
   _dishName=null;_sessionId=null;
+  _runpodTimeMs=0;_runpodJobStart=null;
   clearSession();
   document.getElementById('session-content').innerHTML='';
   document.getElementById('session-screen').classList.remove('active');
@@ -780,6 +783,7 @@ function launchHD(brief){
   var labels=isDressage?['Base','Mi-dressage','Final']:['3/4 Frontal','Overhead','Latéral'];
   var prompts=[brief.prompt_1,brief.prompt_2,brief.prompt_3].filter(function(p){return p;});
   setProgress(0,'Génération images HD…');
+  _runpodJobStart=Date.now(); // ← chrono RunPod images
 
   fetch(SERVER+'/food/generate_batch',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
     body:JSON.stringify({image:img64,prompts:prompts,angles:[0,1,2],mode:brief.mode||'angles',session_id:_sessionId,dish_name:_dishName})})
@@ -806,6 +810,7 @@ function pollBatch(jobId,attempt,labels){
     .then(function(d){
       if(_aborted)return;
       if(d.status==='ok'&&d.images){
+        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;} // ← cumul images
         d.images.forEach(function(img,i){
           var card=document.getElementById('hd-card-'+i);
           if(!card)return;
@@ -892,6 +897,7 @@ function launchVideo(clips){
   .then(function(d){
     if(_aborted)return;
     if(d.status==='queued'&&d.job_id){
+      _runpodJobStart=Date.now(); // ← chrono RunPod vidéo
       pollVideoBatch(d.job_id,0);
     }else{
       setProgress(1,'Erreur lancement vidéos');
@@ -911,6 +917,7 @@ function pollVideoBatch(jobId,attempt){
     .then(function(d){
       if(_aborted)return;
       if(d.status==='ok'){
+        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;} // ← cumul vidéo
         // Afficher les clips individuels si dispo
         if(d.clip_urls&&d.clip_urls.length){
           d.clip_urls.forEach(function(url,i){
@@ -973,6 +980,30 @@ function showFinalResult(videoB64, videoUrl){
   var dl=document.createElement('a');dl.href=src;dl.download='montage_final.mp4';
   dl.className='final-btn';dl.textContent='↓ Télécharger le montage';dl.style.marginTop='8px';
   block.appendChild(dl);
+
+  // ── Feedback 👍/👎 ──
+  var fbWrap=document.createElement('div');
+  fbWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0 8px;';
+  var fbLbl=document.createElement('div');
+  fbLbl.style.cssText='font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);';
+  fbLbl.textContent='Cette génération vous convient ?';
+  fbWrap.appendChild(fbLbl);
+  var fbBtns=document.createElement('div');fbBtns.style.cssText='display:flex;gap:16px;';
+  var btnUp=document.createElement('button');
+  btnUp.style.cssText='font-size:28px;background:transparent;border:1px solid var(--border);width:56px;height:56px;cursor:pointer;transition:border-color .2s,transform .15s;border-radius:8px;';
+  btnUp.textContent='👍';btnUp.id='fb-up';
+  btnUp.onclick=function(){sendFeedback('up',btnUp,btnDown);};
+  var btnDown=document.createElement('button');
+  btnDown.style.cssText='font-size:28px;background:transparent;border:1px solid var(--border);width:56px;height:56px;cursor:pointer;transition:border-color .2s,transform .15s;border-radius:8px;';
+  btnDown.textContent='👎';btnDown.id='fb-down';
+  btnDown.onclick=function(){sendFeedback('down',btnDown,btnUp);};
+  fbBtns.appendChild(btnUp);fbBtns.appendChild(btnDown);
+  fbWrap.appendChild(fbBtns);
+  var fbStatus=document.createElement('div');fbStatus.id='fb-status';
+  fbStatus.style.cssText='font-family:\'DM Mono\',monospace;font-size:9px;color:var(--text-dim);letter-spacing:.08em;min-height:14px;';
+  fbWrap.appendChild(fbStatus);
+  block.appendChild(fbWrap);
+
   var chg=document.createElement('button');chg.className='secondary-btn';chg.textContent='✦ Changer d\'ambiance';
   chg.onclick=changeAmbiance;block.appendChild(chg);
   var nw=document.createElement('button');nw.className='secondary-btn';nw.textContent='↺ Nouveau produit';
@@ -982,6 +1013,33 @@ function showFinalResult(videoB64, videoUrl){
   markSessionComplete();
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
   sc.scrollTop=sc.scrollHeight;
+}
+
+function sendFeedback(rating, btnActive, btnOther){
+  btnActive.style.borderColor='var(--accent)';
+  btnActive.style.transform='scale(1.15)';
+  btnOther.disabled=true;btnOther.style.opacity='.3';
+  btnActive.disabled=true;
+  var status=document.getElementById('fb-status');
+  if(status)status.textContent='Envoi…';
+  var totalSec=_sessionStart?Math.floor((Date.now()-_sessionStart)/1000):null;
+  var runpodSec=Math.round(_runpodTimeMs/1000)||null;
+  var styleName=(_styles&&_styleIdx>=0&&_styles[_styleIdx])?_styles[_styleIdx].name:'';
+  fetch(SERVER+'/food/feedback',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Api-Token':tok()},
+    body:JSON.stringify({
+      session_id:_sessionId||'unknown',
+      rating:rating,
+      dish_name:_dishName||'',
+      style_name:styleName,
+      total_time_seconds:totalSec,
+      runpod_time_seconds:runpodSec
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(){if(status)status.textContent='Merci pour votre retour ✓';})
+  .catch(function(){if(status)status.textContent='Envoi échoué — réessayez';btnActive.disabled=false;});
 }
 
 function changeAmbiance(){

@@ -411,14 +411,21 @@ function resumeSession(){
     if(el)el.textContent=m+':'+(ss<10?'0':'')+ss;
   },1000);
   // Reprendre au bon endroit
-  if(_styleIdx>=0&&_styles){
-    // Styles déjà choisis — reconstruire l'UI styles
+  if(_styles){
     showStylePreviews(_styles);
-    // Puis relancer depuis la sélection de style
-    setTimeout(function(){selectStyle(_styleIdx);},300);
-  }else if(_styles){
-    showStylePreviews(_styles);
-    document.getElementById('session-sub').textContent='Choisissez une ambiance';
+    if(_styleIdx>=0){
+      // Marquer le style sélectionné visuellement seulement
+      setTimeout(function(){
+        for(var i=0;i<_styles.length;i++){
+          var c=document.getElementById('pc-'+i);if(!c)continue;
+          c.classList.remove('selected','dimmed');
+          if(i===_styleIdx)c.classList.add('selected');else c.classList.add('dimmed');
+        }
+        document.getElementById('session-sub').textContent='Choisissez une ambiance ou relancez';
+      },300);
+    }else{
+      document.getElementById('session-sub').textContent='Choisissez une ambiance';
+    }
   }else{
     // Reprendre depuis l'analyse
     var wrap=document.createElement('div');

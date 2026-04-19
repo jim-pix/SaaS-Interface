@@ -680,27 +680,22 @@ function selectStyle(idx){
   }
   document.getElementById('session-sub').textContent='Production en cours…';
   saveSession({styleIdx:idx});
-  initProdSection('Images HD…',0);
-  // Si on a déjà les briefs (reprise de session), lancer directement
+  initProdSection('Génération image HD…');
+
+  // Si on a déjà les briefs (reprise de session)
   if(_hdBriefs&&_hdBriefs[idx]){
-    _angles=_hdBriefs[idx];
     launchHD(_hdBriefs[idx]);
     return;
   }
-  // Appeler Gemini pour les briefs HD + vidéo du style choisi
+
   var s=_styles[idx];
   var history=[
     {role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Voici mon produit.'}]},
     {role:'model',parts:[{text:'J\'ai analysé votre plat et proposé ces styles : '+_styles.map(function(st){return st.name;}).join(', ')+'.'}]},
-    {role:'user',parts:[{text:'Je choisis le style "'+s.name+'". Génère les 3 prompts HD et les 3 prompts vidéo pour ce style. JSON avec "hd":{mode,prompt_1,prompt_2,prompt_3} et "montage":[{angle,prompt}x3].'}]}
+    {role:'user',parts:[{text:'Je choisis le style "'+s.name+'". Génère 1 prompt image HD et 1 prompt vidéo. JSON avec "hd":{mode:"single",prompt:"..."} et "video":{prompt:"..."}.'}]}
   ];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
-  .then(function(r){
-    return r.json().then(function(d){
-      if(!r.ok)throw new Error(d.detail||d.error||('Erreur '+r.status));
-      return d;
-    });
-  })
+  .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||d.error||('Erreur '+r.status));return d;});})
   .then(function(d){
     if(_aborted)return;
     if(d.status==='ok'&&d.brief){
@@ -708,20 +703,18 @@ function selectStyle(idx){
         var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();
         c=c.slice(c.indexOf('{'));
         var b=JSON.parse(c);
-        var hd=b.hd||b;
-        var montage=b.montage||null;
+        var hd=b.hd||{mode:'single',prompt:s.prompt};
+        var video=b.video||{prompt:'cinematic slow zoom, food commercial'};
         if(!_hdBriefs)_hdBriefs=[];
         if(!_montageBriefs)_montageBriefs=[];
         _hdBriefs[idx]=hd;
-        if(montage)_montageBriefs[idx]={clips:montage};
-        _angles=hd;
+        _montageBriefs[idx]=video;
         saveSession({hdBriefs:_hdBriefs,montageBriefs:_montageBriefs});
         launchHD(hd);
         return;
       }catch(e){}
     }
-    // Fallback
-    launchHD({mode:'angles',prompt_1:s.prompt,prompt_2:s.prompt,prompt_3:s.prompt});
+    launchHD({mode:'single',prompt:s.prompt});
   })
   .catch(function(e){
     if(_aborted)return;
@@ -732,34 +725,31 @@ function selectStyle(idx){
 }
 
 /* ── Init section production ── */
-function initProdSection(txt,step){
+function initProdSection(txt){
   var sc=document.getElementById('session-content');
   var old=document.getElementById('phase-prod');if(old)old.remove();
   var block=document.createElement('div');block.className='phase-block';block.id='phase-prod';
-  // Progress
+  // Progress 2 étapes
   var pw=document.createElement('div');pw.className='progress-bar-wrap';
   var ps=document.createElement('div');ps.className='progress-steps';
-  ['Images HD','Vidéos','Montage'].forEach(function(s,i){
+  ['Image HD','Vidéo'].forEach(function(s,i){
     var el=document.createElement('div');el.id='prog-'+i;
-    el.className='progress-step'+(i===step?' active':'');ps.appendChild(el);
+    el.className='progress-step'+(i===0?' active':'');ps.appendChild(el);
   });
   var pt=document.createElement('div');pt.className='progress-txt';pt.id='prog-txt';pt.textContent=txt;
   pw.appendChild(ps);pw.appendChild(pt);block.appendChild(pw);
-  // HD grid label + grid
-  var hdlbl=document.createElement('div');hdlbl.className='sub-lbl';hdlbl.textContent='Images HD';block.appendChild(hdlbl);
-  var hdgrid=document.createElement('div');hdgrid.className='prod-grid';hdgrid.id='hd-grid';
-  for(var i=0;i<3;i++){
-    var card=document.createElement('div');card.className='prod-card';card.id='hd-card-'+i;
-    card.innerHTML='<img class="pc-bg" src="data:image/jpeg;base64,'+img64+'" style="filter:blur(8px) brightness(.4)">'+
-      '<div class="preview-scan"></div><div class="prod-card-label" id="hd-lbl-'+i+'">…</div>';
-    hdgrid.appendChild(card);
-  }
-  block.appendChild(hdgrid);
+  // 1 seule card HD
+  var hdlbl=document.createElement('div');hdlbl.className='sub-lbl';hdlbl.textContent='Image HD';block.appendChild(hdlbl);
+  var card=document.createElement('div');card.className='prod-card';card.id='hd-card-0';
+  card.style.cssText='width:100%;max-width:100%;aspect-ratio:9/16;scroll-snap-align:none;';
+  card.innerHTML='<img class="pc-bg" src="data:image/jpeg;base64,'+img64+'" style="filter:blur(8px) brightness(.4);width:100%;height:100%;object-fit:cover;">'+
+    '<div class="preview-scan"></div><div class="prod-card-label" id="hd-lbl-0">Génération…</div>';
+  block.appendChild(card);
   sc.appendChild(block);sc.scrollTop=sc.scrollHeight;
 }
 
 function setProgress(step,txt){
-  for(var i=0;i<3;i++){
+  for(var i=0;i<2;i++){
     var el=document.getElementById('prog-'+i);if(!el)continue;
     el.className='progress-step';
     if(step<0)el.classList.add('done');
@@ -777,31 +767,24 @@ function showProdError(msg,retry){
   btn.onclick=function(){btn.remove();retry();};block.appendChild(btn);
 }
 
-/* ── Génération HD (batch) ── */
+/* ── Génération HD (1 seule image) ── */
 function launchHD(brief){
-  var isDressage=brief.mode==='dressage';
-  var labels=isDressage?['Base','Mi-dressage','Final']:['3/4 Frontal','Overhead','Latéral'];
-  var prompts=[brief.prompt_1,brief.prompt_2,brief.prompt_3].filter(function(p){return p;});
-  setProgress(0,'Génération images HD…');
-  _runpodJobStart=Date.now(); // ← chrono RunPod images
+  setProgress(0,'Génération image HD…');
+  _runpodJobStart=Date.now();
+  var prompt=brief.prompt||brief.prompt_1||'';
 
   fetch(SERVER+'/food/generate_batch',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({image:img64,prompts:prompts,angles:[0,1,2],mode:brief.mode||'angles',session_id:_sessionId,dish_name:_dishName})})
+    body:JSON.stringify({image:img64,prompts:[prompt],angles:[0],mode:brief.mode||'single',session_id:_sessionId,dish_name:_dishName})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
   .then(function(d){
     if(_aborted)return;
-    if(d.status==='queued'&&d.job_id){
-      pollBatch(d.job_id,0,labels);
-    }else{
-      setProgress(0,'Erreur lancement HD');
-    }
+    if(d.status==='queued'&&d.job_id){pollHD(d.job_id,0);}
+    else{setProgress(0,'Erreur lancement HD');}
   })
-  .catch(function(e){
-    if(!_aborted)setProgress(0,'Erreur réseau: '+(e.message||''));
-  });
+  .catch(function(e){if(!_aborted)setProgress(0,'Erreur réseau: '+(e.message||''));});
 }
 
-function pollBatch(jobId,attempt,labels){
+function pollHD(jobId,attempt){
   if(attempt>80){setProgress(0,'Timeout HD');return;}
   setTimeout(function(){
     if(_aborted)return;
@@ -809,107 +792,79 @@ function pollBatch(jobId,attempt,labels){
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(d){
       if(_aborted)return;
-      if(d.status==='ok'&&d.images){
-        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;} // ← cumul images
-        d.images.forEach(function(img,i){
-          var card=document.getElementById('hd-card-'+i);
-          if(!card)return;
-          if(img&&img.image){
-            _hdResults[i]=img.image;
-            var blobUrl=b64toBlob(img.image,'image/png');
-            var iidx=i;
-            card.innerHTML='<img src="'+blobUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;" onclick="selectHD('+iidx+')">'+
-              '<div class="prod-card-label">'+labels[i]+'</div>'+
-              '<div id="hd-sel-'+i+'" style="display:none;position:absolute;top:6px;right:6px;background:var(--accent);color:#0c0c0a;font-family:\'DM Mono\',monospace;font-size:8px;padding:2px 6px;">✓</div>';
-            card.classList.add('clickable');
-          }else{
-            card.innerHTML='<div class="prod-card-label">erreur</div>';
-          }
-        });
-        var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
+      if(d.status==='ok'&&d.images&&d.images[0]){
+        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;}
+        var img=d.images[0];
+        _hdResults[0]=img.image_url||img.image;
+        var card=document.getElementById('hd-card-0');
+        if(card){
+          var src=img.image_url?img.image_url:(img.image?'data:image/png;base64,'+img.image:'');
+          card.innerHTML='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover;display:block;">'+
+            '<div class="prod-card-label">Image HD ✓</div>'+
+            (img.image_url?'<a href="'+img.image_url+'" download="image_hd.png" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:\'DM Mono\',monospace;font-size:9px;padding:3px 7px;text-decoration:none;">↓</a>':'');
+        }
         saveSession({hdResults:_hdResults});
-        setProgress(1,'Préparation vidéos…');
-        addVidGrid();
-        callGeminiVideo();
+        setProgress(1,'Génération vidéo…');
+        addVidCard();
+        launchVideo();
       }else if(d.status==='processing'){
-        setProgress(0,'Génération images HD… '+(attempt*8)+'s');
-        pollBatch(jobId,attempt+1,labels);
+        setProgress(0,'Image HD… '+(attempt*8)+'s');
+        pollHD(jobId,attempt+1);
       }else{
         setProgress(0,'Erreur HD: '+(d.error||''));
       }
     })
-    .catch(function(){if(!_aborted)pollBatch(jobId,attempt+1,labels);});
+    .catch(function(){if(!_aborted)pollHD(jobId,attempt+1);});
   },attempt===0?5000:8000);
 }
 
-
-function selectHD(idx){
-  for(var i=0;i<3;i++){
-    var c=document.getElementById('hd-card-'+i),s=document.getElementById('hd-sel-'+i);
-    if(c)c.classList.toggle('selected',i===idx);
-    if(s)s.style.display=i===idx?'block':'none';
-  }
-}
-
-/* ── Vid grid ── */
-function addVidGrid(){
+/* ── 1 seule card vidéo ── */
+function addVidCard(){
   var block=document.getElementById('phase-prod');if(!block)return;
-  var lbl=document.createElement('div');lbl.className='sub-lbl';lbl.style.marginTop='8px';lbl.textContent='Vidéos';block.appendChild(lbl);
-  var grid=document.createElement('div');grid.className='prod-grid';grid.id='vid-grid';
-  for(var i=0;i<3;i++){
-    var card=document.createElement('div');card.className='prod-card';card.id='vid-card-'+i;
-    var bg=_hdResults[i]||img64;
-    card.innerHTML='<img class="pc-bg" src="data:image/jpeg;base64,'+bg+'" style="filter:blur(6px) brightness(.45)">'+
-      '<div class="preview-scan"></div><div class="prod-card-label" id="vid-lbl-'+i+'">Clip '+(i+1)+'…</div>';
-    grid.appendChild(card);
-  }
-  block.appendChild(grid);
+  var lbl=document.createElement('div');lbl.className='sub-lbl';lbl.style.marginTop='8px';lbl.textContent='Vidéo';block.appendChild(lbl);
+  var card=document.createElement('div');card.className='prod-card';card.id='vid-card-0';
+  card.style.cssText='width:100%;max-width:100%;aspect-ratio:9/16;scroll-snap-align:none;';
+  var bg=_hdResults[0]||img64;
+  var bgSrc=bg.startsWith('http')?bg:'data:image/jpeg;base64,'+bg;
+  card.innerHTML='<img class="pc-bg" src="'+bgSrc+'" style="filter:blur(6px) brightness(.45);width:100%;height:100%;object-fit:cover;">'+
+    '<div class="preview-scan"></div><div class="prod-card-label" id="vid-lbl-0">Génération…</div>';
+  block.appendChild(card);
   var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
 }
 
-/* ── PHASE 3 : Montage vidéo (brief déjà dispo) ── */
-function callGeminiVideo(){
-  var fallback=[
-    {angle:0,prompt:'cinematic slow zoom, warm golden light, food commercial'},
-    {angle:1,prompt:'overhead rotation, dramatic lighting, product reveal'},
-    {angle:2,prompt:'dolly back reveal, depth of field, luxury food ad'}
-  ];
-  if(_montageBriefs&&_montageBriefs[_styleIdx]&&_montageBriefs[_styleIdx].clips){
-    launchVideo(_montageBriefs[_styleIdx].clips);
-  }else{
-    launchVideo(fallback);
+/* ── Lancement vidéo ── */
+function launchVideo(){
+  var videoPrompt='cinematic slow zoom, warm golden light, food commercial';
+  if(_montageBriefs&&_montageBriefs[_styleIdx]){
+    var mb=_montageBriefs[_styleIdx];
+    videoPrompt=mb.prompt||mb.clips&&mb.clips[0]&&mb.clips[0].prompt||videoPrompt;
   }
-}
+  // Utiliser l'image HD (URL S3 ou b64)
+  var frame=_hdResults[0]||img64;
+  var frameIsUrl=frame&&frame.startsWith('http');
 
-/* ── Génération vidéos (batch) ── */
-function launchVideo(clips){
-  setProgress(1,'Génération vidéos…');
-  var frames=[], prompts=[];
-  for(var i=0;i<3;i++){
-    var clip=clips[i]||{};
-    var angle=(clip.angle!==undefined)?clip.angle:i;
-    frames.push(_hdResults[angle]||_hdResults[0]||img64);
-    prompts.push(clip.prompt||'cinematic food commercial');
-  }
+  _runpodJobStart=Date.now();
   fetch(SERVER+'/food/generate_video',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({frames:frames,prompts:prompts,prompt:prompts[0],length:81,width:480,height:854,session_id:_sessionId,dish_name:_dishName})})
+    body:JSON.stringify({
+      frames:[frameIsUrl?'':frame],
+      frame_urls:frameIsUrl?[frame]:[],
+      prompts:[videoPrompt],
+      prompt:videoPrompt,
+      length:81,width:480,height:854,
+      session_id:_sessionId,dish_name:_dishName
+    })})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
   .then(function(d){
     if(_aborted)return;
-    if(d.status==='queued'&&d.job_id){
-      _runpodJobStart=Date.now(); // ← chrono RunPod vidéo
-      pollVideoBatch(d.job_id,0);
-    }else{
-      setProgress(1,'Erreur lancement vidéos');
-    }
+    if(d.status==='queued'&&d.job_id){pollVideo(d.job_id,0);}
+    else{setProgress(1,'Erreur lancement vidéo');}
   })
   .catch(function(e){if(!_aborted)setProgress(1,'Erreur: '+(e.message||''));});
 }
 
-function pollVideoBatch(jobId,attempt){
-  if(attempt>120){setProgress(1,'Timeout vidéos');return;}
-  var elapsed=attempt*8;
-  setProgress(1,'Génération vidéos… '+elapsed+'s');
+function pollVideo(jobId,attempt){
+  if(attempt>120){setProgress(1,'Timeout vidéo');return;}
+  setProgress(1,'Vidéo… '+(attempt*8)+'s');
   setTimeout(function(){
     if(_aborted)return;
     fetch(SERVER+'/food/video_result',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({job_id:jobId})})
@@ -917,71 +872,51 @@ function pollVideoBatch(jobId,attempt){
     .then(function(d){
       if(_aborted)return;
       if(d.status==='ok'){
-        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;} // ← cumul vidéo
-        // Afficher les clips individuels si dispo
-        if(d.clip_urls&&d.clip_urls.length){
-          d.clip_urls.forEach(function(url,i){
-            var card=document.getElementById('vid-card-'+i);if(!card)return;
-            var src=url;
-            card.innerHTML='<video autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"><source src="'+src+'" type="video/mp4"></video>'+
-              '<div class="prod-card-label">Clip '+(i+1)+' ✓</div>'+
-              '<a href="'+src+'" download="clip_'+(i+1)+'.mp4" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:\'DM Mono\',monospace;font-size:9px;padding:3px 7px;letter-spacing:.06em;text-decoration:none;">↓</a>';
-          });
+        if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;}
+        // Récupérer l'URL vidéo
+        var videoUrl=d.video_url||(d.clip_urls&&d.clip_urls[0])||null;
+        var videoB64=d.video||null;
+        // Afficher dans la card
+        var card=document.getElementById('vid-card-0');
+        if(card&&videoUrl){
+          card.innerHTML='<video autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"><source src="'+videoUrl+'" type="video/mp4"></video>'+
+            '<div class="prod-card-label">Vidéo ✓</div>'+
+            '<a href="'+videoUrl+'" download="video.mp4" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:\'DM Mono\',monospace;font-size:9px;padding:3px 7px;text-decoration:none;">↓</a>';
         }
-        setProgress(2,'Montage terminé ✓');
-        if(d.video_url){
-          // Télécharger le montage depuis S3
-          fetch(d.video_url).then(function(r){return r.blob();}).then(function(b){
-            var reader=new FileReader();
-            reader.onload=function(e){showFinalResult(e.target.result.split(',')[1]);};
-            reader.readAsDataURL(b);
-          }).catch(function(){showFinalResult(null,d.video_url);});
-          return;
-        }
-        if(d.video){showFinalResult(d.video);return;}
-        setProgress(1,'Erreur: pas de vidéo');
+        showFinalResult(videoB64, videoUrl);
       }else if(d.status==='processing'){
-        pollVideoBatch(jobId,attempt+1);
+        pollVideo(jobId,attempt+1);
       }else{
         setProgress(1,'Erreur: '+(d.error||''));
       }
     })
-    .catch(function(){if(!_aborted)pollVideoBatch(jobId,attempt+1);});
+    .catch(function(){if(!_aborted)pollVideo(jobId,attempt+1);});
   },attempt===0?5000:8000);
 }
 
-/* ── Concat ── */
-function launchConcat(){
-  var valid=_vidResults.filter(function(v){return v;});
-  if(!valid.length){showProdError('Aucune vidéo générée.',null);return;}
-  fetch(SERVER+'/food/concat_videos',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({videos:valid})})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(_aborted)return;
-    if(d.status==='ok'&&d.video)showFinalResult(d.video);
-    else showProdError('Erreur montage.',null);
-  })
-  .catch(function(){if(!_aborted)showProdError('Erreur serveur.',null);});
-}
-
 function showFinalResult(videoB64, videoUrl){
-  setProgress(-1,'Montage terminé ✓');
+  setProgress(-1,'Terminé ✓');
   var sc=document.getElementById('session-content');
+  var old=document.getElementById('phase-final');if(old)old.remove();
   var block=document.createElement('div');block.className='phase-block';block.id='phase-final';
-  var lbl=document.createElement('div');lbl.className='phase-label';lbl.textContent='Montage final';block.appendChild(lbl);
-  var src=videoUrl||(videoB64?'data:video/mp4;base64,'+videoB64:null);
-  if(!src){showProdError('Erreur affichage montage.',null);return;}
-  var vid=document.createElement('video');
-  vid.controls=true;vid.autoplay=true;vid.loop=true;vid.setAttribute('playsinline','');
-  vid.style.cssText='width:100%;display:block;border:1px solid var(--accent-dim);';
-  vid.innerHTML='<source src="'+src+'" type="video/mp4">';
-  block.appendChild(vid);
-  var dl=document.createElement('a');dl.href=src;dl.download='montage_final.mp4';
-  dl.className='final-btn';dl.textContent='↓ Télécharger le montage';dl.style.marginTop='8px';
-  block.appendChild(dl);
+  var lbl=document.createElement('div');lbl.className='phase-label';lbl.textContent='Résultat final';block.appendChild(lbl);
 
-  // ── Feedback 👍/👎 ──
+  // Vidéo — URL S3 directe prioritaire (fix fetch error)
+  var src=videoUrl||(videoB64?'data:video/mp4;base64,'+videoB64:null);
+  if(src){
+    var vid=document.createElement('video');
+    vid.controls=true;vid.autoplay=true;vid.loop=true;vid.setAttribute('playsinline','');
+    vid.style.cssText='width:100%;display:block;border:1px solid var(--accent-dim);';
+    vid.innerHTML='<source src="'+src+'" type="video/mp4">';
+    block.appendChild(vid);
+    if(videoUrl){
+      var dl=document.createElement('a');dl.href=videoUrl;dl.download='video_final.mp4';
+      dl.className='final-btn';dl.style.marginTop='8px';dl.textContent='↓ Télécharger la vidéo';
+      block.appendChild(dl);
+    }
+  }
+
+  // Feedback 👍/👎
   var fbWrap=document.createElement('div');
   fbWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0 8px;';
   var fbLbl=document.createElement('div');
@@ -991,11 +926,11 @@ function showFinalResult(videoB64, videoUrl){
   var fbBtns=document.createElement('div');fbBtns.style.cssText='display:flex;gap:16px;';
   var btnUp=document.createElement('button');
   btnUp.style.cssText='font-size:28px;background:transparent;border:1px solid var(--border);width:56px;height:56px;cursor:pointer;transition:border-color .2s,transform .15s;border-radius:8px;';
-  btnUp.textContent='👍';btnUp.id='fb-up';
+  btnUp.textContent='👍';
   btnUp.onclick=function(){sendFeedback('up',btnUp,btnDown);};
   var btnDown=document.createElement('button');
   btnDown.style.cssText='font-size:28px;background:transparent;border:1px solid var(--border);width:56px;height:56px;cursor:pointer;transition:border-color .2s,transform .15s;border-radius:8px;';
-  btnDown.textContent='👎';btnDown.id='fb-down';
+  btnDown.textContent='👎';
   btnDown.onclick=function(){sendFeedback('down',btnDown,btnUp);};
   fbBtns.appendChild(btnUp);fbBtns.appendChild(btnDown);
   fbWrap.appendChild(fbBtns);
@@ -1044,9 +979,10 @@ function sendFeedback(rating, btnActive, btnOther){
 
 function changeAmbiance(){
   _styleIdx=-1;_hdResults=[null,null,null];_vidResults=[null,null,null];_aborted=false;
+  _runpodTimeMs=0;_runpodJobStart=null;
   var p=document.getElementById('phase-prod');if(p)p.remove();
   var f=document.getElementById('phase-final');if(f)f.remove();
-  for(var i=0;i<3;i++){var c=document.getElementById('pc-'+i);if(c)c.classList.remove('selected','dimmed');}
+  for(var i=0;i<4;i++){var c=document.getElementById('pc-'+i);if(c)c.classList.remove('selected','dimmed');}
   document.getElementById('session-sub').textContent='Choisissez une ambiance';
   document.getElementById('session-content').scrollTop=0;
 }

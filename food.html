@@ -293,7 +293,6 @@ function doAuth(){
   err.textContent='Vérification…';
   fetch(SERVER+'/food/ping',{headers:{'X-Api-Token':token}})
   .then(function(r){if(r.status===401||r.status===403)throw new Error('Token invalide');if(!r.ok)throw new Error('Erreur serveur');return r.json();})
-  .then(function(){sessionStorage.setItem('food_token',token);err.textContent='';showMain(token);})
   .then(function(){sessionStorage.setItem('food_token',token);localStorage.setItem('food_token',token);err.textContent='';showMain(token);})
   .catch(function(e){err.textContent=e.message||'Token invalide';});
 }
@@ -305,7 +304,6 @@ function showMain(token){
   document.getElementById('led2').classList.add('on');
 }
 function doLogout(){
-  sessionStorage.clear();
   sessionStorage.clear();localStorage.removeItem('food_token');
   resetState();
   document.getElementById('page-main').classList.add('hidden');
@@ -313,7 +311,6 @@ function doLogout(){
   document.getElementById('tokenInput').value='';
 }
 window.addEventListener('load',function(){
-  var t=sessionStorage.getItem('food_token');
   var t=sessionStorage.getItem('food_token')||localStorage.getItem('food_token');
   if(t){document.getElementById('tokenInput').value=t;showMain(t);}
 });
@@ -326,7 +323,6 @@ var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
 var _sessionStart=null,_timerInterval=null;
 
-function tok(){return window._token||sessionStorage.getItem('food_token')||'';}
 function tok(){return window._token||sessionStorage.getItem('food_token')||localStorage.getItem('food_token')||'';}
 
 function resetState(){
@@ -479,29 +475,59 @@ function showStylePreviews(styles){
   genPreview(styles,0);
 }
 
+/* ── Style images mapping ── */
+var STYLE_IMAGES_BASE='https://wan22-videos-chris.s3.eu-north-1.amazonaws.com/wan22-videos/food-da-styles/';
+var STYLE_IMG_MAP={
+  'GOLDEN HOUR WINDOW':'golden-hour-window.jpg',
+  'PERFECTLY IMPERFECT':'perfectly-imperfect.jpg',
+  'SOFT DAYLIGHT':'soft-daylight.jpg',
+  'HUMAN TOUCH':'human-touch.jpg',
+  'DARK MOODY LUXURY':'dark-moody-luxury.jpg',
+  'CHIAROSCURO':'chiaroscuro.jpg',
+  'WET & GLOSSY':'wet-glossy.jpg',
+  'COLOUR BLOCKING':'colour-blocking.jpg',
+  'VIBRANT CONTRAST':'vibrant-contrast.jpg',
+  'MACRO MONDE':'macro-monde.jpg',
+  'OVERHEAD FLAT LAY':'overhead-flat-lay.jpg',
+  'RETRO FILM':'retro-film.jpg',
+  'MINIMALIST STUDIO':'minimalist-studio.jpg',
+  'NATURE TABLE':'nature-table.jpg',
+  'STEAM & SMOKE':'steam-smoke.jpg',
+  'AQUATIQUE FRAÎCHEUR':'aquatique-fraicheur.jpg',
+  'SLOW POUR CINEMATIC':'slow-pour-cinematic.jpg',
+  'DRESSAGE EN DIRECT':'dressage-en-direct.jpg'
+};
+function getStyleImage(name){
+  var key=Object.keys(STYLE_IMG_MAP).find(function(k){return name.toUpperCase().indexOf(k)>=0||k.indexOf(name.toUpperCase())>=0;});
+  return key?STYLE_IMAGES_BASE+STYLE_IMG_MAP[key]:null;
+}
+
 function genPreview(styles,idx){
   if(_aborted||idx>=styles.length)return;
-  fetch(SERVER+'/food/generate',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({image:img64,prompt:styles[idx].prompt,preview:true})})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(_aborted)return;
-    if(d.status==='queued'&&d.job_id){
-      pollImage(d.job_id,0,function(b64,err){
-        if(_aborted)return;
-        var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
-        if(b64&&card){
-          var blobUrl=b64toBlob(b64,'image/png');
-          var img=document.createElement('img');img.src=blobUrl;
-          img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-          var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
-          if(st)st.style.display='none';
-          card.dataset.ready='1';card.classList.remove('no-ready');
-        }else{if(st)st.textContent=err||'erreur';}
-        genPreview(styles,idx+1);
-      });
-    }else{genPreview(styles,idx+1);}
-  })
-  .catch(function(){if(!_aborted)genPreview(styles,idx+1);});
+  var card=document.getElementById('pc-'+idx),st=document.getElementById('pc-st-'+idx);
+  var imgUrl=getStyleImage(styles[idx].name);
+  if(imgUrl){
+    var img=document.createElement('img');
+    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+    img.onload=function(){
+      var shimmer=card.querySelector('.pc-shimmer');if(shimmer)shimmer.replaceWith(img);
+      if(st)st.style.display='none';
+      card.dataset.ready='1';card.classList.remove('no-ready');
+      genPreview(styles,idx+1);
+    };
+    img.onerror=function(){
+      // Fallback si image pas encore uploadée
+      card.dataset.ready='1';card.classList.remove('no-ready');
+      if(st)st.textContent='';
+      genPreview(styles,idx+1);
+    };
+    img.src=imgUrl;
+  }else{
+    // Style non mappé — card cliquable avec shimmer
+    card.dataset.ready='1';card.classList.remove('no-ready');
+    if(st)st.textContent='';
+    genPreview(styles,idx+1);
+  }
 }
 
 function selectStyle(idx){

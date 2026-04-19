@@ -316,6 +316,15 @@ window.addEventListener('load',function(){
   if(t){document.getElementById('tokenInput').value=t;showMain(t);checkResumeSession();}
 });
 
+/* ── STATE ── */
+var img64=null,imgMime='image/jpeg',selectedFormat='9:16';
+var _styles=null,_styleIdx=-1,_angles=null;
+var _hdBriefs=null,_montageBriefs=null;
+var _hdResults=[null,null,null],_vidResults=[null,null,null];
+var _aborted=false;
+var _sessionStart=null,_timerInterval=null;
+var _dishName=null,_sessionId=null;
+
 /* ── PERSISTANCE SESSION ── */
 var SESSION_KEY='food_da_session';
 
@@ -436,13 +445,6 @@ function resumeSession(){
   }
 }
 
-
-var img64=null,imgMime='image/jpeg',selectedFormat='9:16';
-var _styles=null,_styleIdx=-1,_angles=null;
-var _hdBriefs=null,_montageBriefs=null;
-var _hdResults=[null,null,null],_vidResults=[null,null,null];
-var _aborted=false;
-var _dishName=null,_sessionId=null;
 
 function tok(){return window._token||sessionStorage.getItem('food_token')||localStorage.getItem('food_token')||'';}
 

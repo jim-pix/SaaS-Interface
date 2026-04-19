@@ -420,7 +420,7 @@ function startSession(){
 
 /* ── PHASE 1 : Gemini styles ── */
 function callGeminiStyles(){
-  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et génère le brief complet : 3 styles, prompts HD et prompts vidéo pour chaque style.'}]}];
+  var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et génère le brief complet : 4 styles, prompts HD et prompts vidéo pour chaque style.'}]}];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
   .then(function(r){
     return r.json().then(function(d){
@@ -436,7 +436,7 @@ function callGeminiStyles(){
       var c=d.brief.replace(/```json/gi,'').replace(/```/g,'').trim();
       c=c.slice(c.indexOf('{'));
       var b=JSON.parse(c);
-      if(b.phase==='1a'&&b.styles&&b.styles.length===3){
+      if(b.phase==='1a'&&b.styles&&b.styles.length>=3){
         _styles=b.styles;
         _hdBriefs=b.hd||null;
         _montageBriefs=b.montage||null;
@@ -465,7 +465,7 @@ function showStylePreviews(styles){
   styles.forEach(function(s,i){
     var card=document.createElement('div');card.className='preview-card no-ready';card.id='pc-'+i;
     card.innerHTML='<div class="pc-shimmer"><img class="pc-bg" src="data:image/jpeg;base64,'+img64+'"><div class="preview-scan"></div></div>'+
-      '<div class="pc-label"><div class="pc-name">'+s.name+'</div><div class="pc-desc">'+(s.desc||'')+'</div><div class="pc-status" id="pc-st-'+i+'">génération…</div></div>';
+      '<div class="pc-label"><div class="pc-name">'+s.name+'</div></div>';
     card.addEventListener('click',function(){if(card.dataset.ready)selectStyle(i);});
     grid.appendChild(card);
   });

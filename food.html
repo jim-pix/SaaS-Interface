@@ -121,11 +121,12 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;color:var(--text);backgrou
 .analyse-txt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--text-dim);}
 
 /* ── Grids (previews + prod) ── */
-.previews-grid,.prod-grid{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
-.previews-grid::-webkit-scrollbar,.prod-grid::-webkit-scrollbar{display:none;}
+.previews-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:4px;}
+.prod-grid{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+.prod-grid::-webkit-scrollbar{display:none;}
 
 /* Preview cards (styles) */
-.preview-card{flex:0 0 calc(75vw);max-width:220px;scroll-snap-align:start;position:relative;border:1px solid var(--border);background:var(--surface);overflow:hidden;cursor:pointer;transition:border-color .2s;aspect-ratio:9/16;}
+.preview-card{position:relative;border:1px solid var(--border);background:var(--surface);overflow:hidden;cursor:pointer;transition:border-color .2s;aspect-ratio:1/1;border-radius:10px;}
 .preview-card.selected{border:2px solid var(--accent);}
 .preview-card.dimmed{opacity:.4;}
 .preview-card.no-ready{cursor:default;}

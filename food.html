@@ -435,7 +435,7 @@ var _styles=null,_styleIdx=-1,_angles=null;
 var _hdBriefs=null,_montageBriefs=null;
 var _hdResults=[null,null,null],_vidResults=[null,null,null];
 var _aborted=false;
-var _sessionStart=null,_timerInterval=null;
+var _dishName=null,_sessionId=null;
 
 function tok(){return window._token||sessionStorage.getItem('food_token')||localStorage.getItem('food_token')||'';}
 
@@ -446,6 +446,7 @@ function resetState(){
   _hdResults=[null,null,null];_vidResults=[null,null,null];
   _aborted=false;
   if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}_sessionStart=null;
+  _dishName=null;_sessionId=null;
   clearSession();
   document.getElementById('session-content').innerHTML='';
   document.getElementById('session-screen').classList.remove('active');
@@ -554,6 +555,16 @@ function callGeminiStyles(){
         _styles=b.styles;
         _hdBriefs=b.hd||null;
         _montageBriefs=b.montage||null;
+        _dishName=b.dish_name||'Plat';
+        // Générer session ID : token-JJ-MM-AA-HHMM
+        var now=new Date();
+        var dd=String(now.getDate()).padStart(2,'0');
+        var mm=String(now.getMonth()+1).padStart(2,'0');
+        var yy=String(now.getFullYear()).slice(-2);
+        var hh=String(now.getHours()).padStart(2,'0');
+        var mn=String(now.getMinutes()).padStart(2,'0');
+        var userSlug=(tok()||'user').replace(/[^a-zA-Z0-9]/g,'-').slice(0,12);
+        _sessionId=userSlug+'-'+dd+'-'+mm+'-'+yy+'-'+hh+mn;
         saveSession();
         showStylePreviews(b.styles);
         return;
@@ -721,7 +732,7 @@ function launchHD(brief){
   setProgress(0,'Génération images HD…');
 
   fetch(SERVER+'/food/generate_batch',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({image:img64,prompts:prompts,angles:[0,1,2],mode:brief.mode||'angles'})})
+    body:JSON.stringify({image:img64,prompts:prompts,angles:[0,1,2],mode:brief.mode||'angles',session_id:_sessionId,dish_name:_dishName})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
   .then(function(d){
     if(_aborted)return;
@@ -826,7 +837,7 @@ function launchVideo(clips){
     prompts.push(clip.prompt||'cinematic food commercial');
   }
   fetch(SERVER+'/food/generate_video',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},
-    body:JSON.stringify({frames:frames,prompts:prompts,prompt:prompts[0],length:81,width:480,height:854})})
+    body:JSON.stringify({frames:frames,prompts:prompts,prompt:prompts[0],length:81,width:480,height:854,session_id:_sessionId,dish_name:_dishName})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
   .then(function(d){
     if(_aborted)return;

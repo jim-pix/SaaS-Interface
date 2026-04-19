@@ -542,6 +542,8 @@ function startSession(){
 
 /* ── PHASE 1 : Gemini styles ── */
 function callGeminiStyles(){
+  dbg('info', 'img64 length: ' + (img64 ? img64.length : 'NULL') + ' mime: ' + imgMime);
+  dbg('info', 'tok: ' + (tok()?'ok':'VIDE'));
   var history=[{role:'user',parts:[{inline_data:{mime_type:imgMime,data:img64}},{text:'Analyse ce plat et propose 4 ambiances visuelles différentes. Réponds uniquement avec le JSON phase 1a.'}]}];
   fetch(SERVER+'/food/da/chat',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({history:history})})
   .then(function(r){

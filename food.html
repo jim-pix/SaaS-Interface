@@ -565,7 +565,22 @@ function startSession(){
   callGeminiStyles();
 }
 
-/* ── PHASE 1 : Gemini styles ── */
+/* ── Message surcharge IA ── */
+function showOverloadMsg(containerId, retryFn){
+  // Afficher dans le shimmer analyse ou dans prog-txt selon le contexte
+  var el=document.getElementById(containerId);
+  if(el){
+    if(containerId==='analyse-wrap'){
+      el.innerHTML='<div class="analyse-dots"><div class="analyse-dot"></div><div class="analyse-dot"></div><div class="analyse-dot"></div></div>'+
+        '<div class="analyse-txt" style="color:var(--accent);text-align:center;line-height:1.6;">⚡ L\'IA est momentanément surchargée<br><span style="font-size:11px;opacity:.7;">Nouvelle tentative automatique en cours…</span></div>';
+    }else{
+      el.textContent='⚡ IA surchargée — nouvelle tentative…';
+    }
+  }
+  document.getElementById('session-sub').textContent='Surcharge IA — patience…';
+  if(retryFn)setTimeout(retryFn,4000);
+}
+
 function callGeminiStyles(){
   dbg('info', 'img64 length: ' + (img64 ? img64.length : 'NULL') + ' mime: ' + imgMime);
   dbg('info', 'tok: ' + (tok()?'ok':'VIDE'));
@@ -611,6 +626,9 @@ function callGeminiStyles(){
     var wrap=document.getElementById('analyse-wrap');if(wrap)wrap.remove();
     var msg=e.message||'';
     if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(callGeminiStyles,3000);return;}
+    if(msg.indexOf('503')>=0||msg.toLowerCase().indexOf('indisponible')>=0||msg.toLowerCase().indexOf('surcharg')>=0){
+      showOverloadMsg('analyse-wrap',callGeminiStyles);return;
+    }
     showError(msg||'Erreur réseau. Réessayez.',callGeminiStyles);
   });
 }
@@ -740,6 +758,9 @@ function selectStyle(idx){
     if(_aborted)return;
     var msg=e.message||'';
     if(msg==='Load failed'||msg==='Failed to fetch'){setTimeout(function(){selectStyle(idx);},3000);return;}
+    if(msg.indexOf('503')>=0||msg.toLowerCase().indexOf('indisponible')>=0||msg.toLowerCase().indexOf('surcharg')>=0){
+      showOverloadMsg('prog-txt',function(){selectStyle(idx);});return;
+    }
     showProdError(msg||'Erreur réseau.',function(){selectStyle(idx);});
   });
 }

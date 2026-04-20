@@ -187,10 +187,30 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;color:var(--text);backgrou
 @supports(padding-bottom:env(safe-area-inset-bottom)){
   .session-content{padding-bottom:calc(24px + env(safe-area-inset-bottom));}
 }
+
+/* ── LIGHTBOX ── */
+#lightbox{position:fixed;inset:0;z-index:500;background:rgba(5,10,18,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+#lightbox.open{opacity:1;pointer-events:all;}
+#lightbox img{max-width:100%;max-height:80vh;object-fit:contain;display:block;}
+.lightbox-bar{display:flex;gap:12px;padding:16px 20px calc(16px + env(safe-area-inset-bottom));width:100%;justify-content:center;}
+.lb-btn{background:transparent;border:1px solid var(--border-mid);color:var(--text);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:10px 20px;cursor:pointer;transition:border-color .2s;text-decoration:none;display:flex;align-items:center;}
+.lb-btn:hover{border-color:var(--accent);}
+.lb-btn.accent{background:var(--accent);color:#0f1c28;border-color:var(--accent);}
+.lb-ios-hint{font-family:'DM Mono',monospace;font-size:8px;color:var(--text-dim);letter-spacing:.08em;text-align:center;padding:0 24px 8px;line-height:1.6;}
 </style>
 </head>
 <body>
 <div class="fond"></div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox(event)">
+  <img id="lb-img" src="">
+  <div class="lightbox-bar" onclick="event.stopPropagation()">
+    <a id="lb-dl" class="lb-btn accent" download="image_hd.png">↓ Sauvegarder</a>
+    <button class="lb-btn" onclick="closeLightbox()">✕ Fermer</button>
+  </div>
+  <div class="lb-ios-hint" id="lb-ios-hint" style="display:none">Sur iPhone : appuyez longuement sur l'image → "Enregistrer dans Photos"</div>
+</div>
 
 <!-- AUTH -->
 <div class="page" id="page-auth">
@@ -799,8 +819,8 @@ function pollHD(jobId,attempt){
         var card=document.getElementById('hd-card-0');
         if(card){
           var src=img.image_url?img.image_url:(img.image?'data:image/png;base64,'+img.image:'');
-          card.innerHTML='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover;display:block;">'+
-            '<div class="prod-card-label">Image HD ✓</div>'+
+          card.innerHTML='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" onclick="openLightbox(\''+src+'\')">'+
+            '<div class="prod-card-label">Image HD — tap pour agrandir</div>'+
             (img.image_url?'<a href="'+img.image_url+'" download="image_hd.png" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:\'DM Mono\',monospace;font-size:9px;padding:3px 7px;text-decoration:none;">↓</a>':'');
         }
         saveSession({hdResults:_hdResults});
@@ -950,6 +970,31 @@ function showFinalResult(videoB64, videoUrl){
   sc.scrollTop=sc.scrollHeight;
 }
 
+/* ── Lightbox ── */
+var _isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+function openLightbox(src){
+  var lb=document.getElementById('lightbox');
+  var img=document.getElementById('lb-img');
+  var dl=document.getElementById('lb-dl');
+  var hint=document.getElementById('lb-ios-hint');
+  img.src=src;
+  dl.href=src;
+  if(_isIOS&&src.startsWith('http')){
+    hint.style.display='block';
+    dl.style.display='none';
+  }else{
+    hint.style.display='none';
+    dl.style.display='flex';
+  }
+  lb.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(e){
+  if(e&&e.target!==document.getElementById('lightbox'))return;
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow='';
+}
+
 function sendFeedback(rating, btnActive, btnOther){
   btnActive.style.borderColor='var(--accent)';
   btnActive.style.transform='scale(1.15)';
@@ -1020,23 +1065,8 @@ function pollImage(jobId,attempt,onDone){
   },attempt===0?3000:8000);
 }
 
-function pollVideo(jobId,attempt,clipIdx,onDone){
-  if(attempt>90){onDone(null,'Timeout');return;}
-  var lbl=document.getElementById('vid-lbl-'+clipIdx);
-  if(lbl)lbl.textContent='Clip '+(clipIdx+1)+' — '+(attempt*8)+'s…';
-  setTimeout(function(){
-    if(_aborted)return;
-    fetch(SERVER+'/food/video_result',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Token':tok()},body:JSON.stringify({job_id:jobId})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(_aborted)return;
-      if(d.status==='ok'&&d.video)onDone(d.video,null);
-      else if(d.status==='processing')pollVideo(jobId,attempt+1,clipIdx,onDone);
-      else onDone(null,d.error||'Erreur');
-    })
-    .catch(function(){if(!_aborted)pollVideo(jobId,attempt+1,clipIdx,onDone);});
-  },attempt===0?5000:8000);
-}
+
+
 </script>
 <!-- DEBUG PANEL -->
 <button id="debug-toggle" onclick="toggleDebug()">🐞 debug</button>

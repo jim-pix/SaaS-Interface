@@ -188,6 +188,37 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;color:var(--text);backgrou
   .session-content{padding-bottom:calc(24px + env(safe-area-inset-bottom));}
 }
 
+/* ── RESPONSIVE DESKTOP ── */
+@media(min-width:768px){
+  #page-main{align-items:center;}
+  .main-header{max-width:900px;}
+  .main-body{max-width:900px;}
+
+  /* Upload — centré, plus large */
+  .drop-wrap{max-width:420px;}
+  .drop-big{aspect-ratio:4/3;}
+
+  /* Session layout 2 colonnes */
+  .session-screen{flex-direction:column;}
+  .session-content{padding:24px 32px;gap:24px;}
+
+  /* Previews — 4 colonnes sur desktop */
+  .previews-grid{grid-template-columns:repeat(4,1fr);gap:12px;}
+  .preview-card{aspect-ratio:3/4;}
+
+  /* Cards HD et vidéo — pleine largeur, ratio paysage sur desktop */
+  .prod-card{max-width:100% !important;aspect-ratio:16/9 !important;flex:none;width:100%;}
+
+  /* Phase prod — 2 colonnes côte à côte */
+  #phase-prod .prod-grid-desktop{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  /* Lightbox — image max height plus grande */
+  #lightbox img{max-height:90vh;}
+
+  /* Boutons plus larges */
+  .final-btn,.secondary-btn{max-width:480px;margin-left:auto;margin-right:auto;}
+}
+
 /* ── LIGHTBOX ── */
 #lightbox{position:fixed;inset:0;z-index:500;background:rgba(5,10,18,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
 #lightbox.open{opacity:1;pointer-events:all;}
@@ -779,14 +810,25 @@ function initProdSection(txt){
   });
   var pt=document.createElement('div');pt.className='progress-txt';pt.id='prog-txt';pt.textContent=txt;
   pw.appendChild(ps);pw.appendChild(pt);block.appendChild(pw);
+  // wrapper desktop 2 colonnes
+  var wrapper=document.createElement('div');wrapper.id='prod-cols';
+  wrapper.style.cssText='display:grid;grid-template-columns:1fr;gap:16px;';
   // 1 seule card HD
-  var hdlbl=document.createElement('div');hdlbl.className='sub-lbl';hdlbl.textContent='Image HD';block.appendChild(hdlbl);
+  var hdcol=document.createElement('div');
+  var hdlbl=document.createElement('div');hdlbl.className='sub-lbl';hdlbl.textContent='Image HD';hdcol.appendChild(hdlbl);
   var card=document.createElement('div');card.className='prod-card';card.id='hd-card-0';
   card.style.cssText='width:100%;max-width:100%;aspect-ratio:9/16;scroll-snap-align:none;';
   card.innerHTML='<img class="pc-bg" src="data:image/jpeg;base64,'+img64+'" style="filter:blur(8px) brightness(.4);width:100%;height:100%;object-fit:cover;">'+
-    '<div class="preview-scan"></div><div class="prod-card-label" id="hd-lbl-0">Génération…</div>';
-  block.appendChild(card);
+    '<div class="preview-scan"></div><div class="prod-card-label" id="hd-lbl-0">Image envoyée…</div>';
+  hdcol.appendChild(card);
+  wrapper.appendChild(hdcol);
+  block.appendChild(wrapper);
   sc.appendChild(block);sc.scrollTop=sc.scrollHeight;
+  // Desktop : 2 colonnes quand les 2 cards sont présentes
+  if(window.innerWidth>=768){
+    wrapper.style.gridTemplateColumns='1fr 1fr';
+    card.style.aspectRatio='3/4';
+  }
 }
 
 function setProgress(step,txt){
@@ -849,7 +891,11 @@ function pollHD(jobId,attempt){
         addVidCard();
         launchVideo();
       }else if(d.status==='processing'){
-        setProgress(0,'Image HD… '+(attempt*8)+'s');
+        var rs=d.runpod_status||'';
+        var label=rs==='IN_QUEUE'?'Image envoyée — en file d\'attente…':
+                  rs==='IN_PROGRESS'?'Génération en cours…':
+                  'Image HD… '+(attempt*8)+'s';
+        setProgress(0,label);
         pollHD(jobId,attempt+1);
       }else{
         setProgress(0,'Erreur HD: '+(d.error||''));
@@ -862,14 +908,18 @@ function pollHD(jobId,attempt){
 /* ── 1 seule card vidéo ── */
 function addVidCard(){
   var block=document.getElementById('phase-prod');if(!block)return;
-  var lbl=document.createElement('div');lbl.className='sub-lbl';lbl.style.marginTop='8px';lbl.textContent='Vidéo';block.appendChild(lbl);
+  var wrapper=document.getElementById('prod-cols');
+  var vidcol=document.createElement('div');
+  var lbl=document.createElement('div');lbl.className='sub-lbl';lbl.textContent='Vidéo';vidcol.appendChild(lbl);
   var card=document.createElement('div');card.className='prod-card';card.id='vid-card-0';
-  card.style.cssText='width:100%;max-width:100%;aspect-ratio:9/16;scroll-snap-align:none;';
+  var isDesktop=window.innerWidth>=768;
+  card.style.cssText='width:100%;max-width:100%;aspect-ratio:'+(isDesktop?'3/4':'9/16')+';scroll-snap-align:none;';
   var bg=_hdResults[0]||img64;
   var bgSrc=bg.startsWith('http')?bg:'data:image/jpeg;base64,'+bg;
   card.innerHTML='<img class="pc-bg" src="'+bgSrc+'" style="filter:blur(6px) brightness(.45);width:100%;height:100%;object-fit:cover;">'+
-    '<div class="preview-scan"></div><div class="prod-card-label" id="vid-lbl-0">Génération…</div>';
-  block.appendChild(card);
+    '<div class="preview-scan"></div><div class="prod-card-label" id="vid-lbl-0">Vidéo envoyée…</div>';
+  vidcol.appendChild(card);
+  if(wrapper){wrapper.appendChild(vidcol);}else{block.appendChild(vidcol);}
   var sc=document.getElementById('session-content');sc.scrollTop=sc.scrollHeight;
 }
 
@@ -926,6 +976,13 @@ function pollVideo(jobId,attempt){
         }
         showFinalResult(videoB64, videoUrl);
       }else if(d.status==='processing'){
+        var rs=d.runpod_status||'';
+        var label=rs==='IN_QUEUE'?'Vidéo envoyée — en file d\'attente…':
+                  rs==='IN_PROGRESS'?'Génération en cours…':
+                  'Vidéo… '+(attempt*8)+'s';
+        setProgress(1,label);
+        var lbl=document.getElementById('vid-lbl-0');
+        if(lbl)lbl.textContent=label;
         pollVideo(jobId,attempt+1);
       }else{
         setProgress(1,'Erreur: '+(d.error||''));

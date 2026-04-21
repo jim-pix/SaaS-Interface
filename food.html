@@ -377,6 +377,7 @@ var _sessionStart=null,_timerInterval=null;
 var _dishName=null,_sessionId=null;
 var _runpodTimeMs=0;   // cumul temps jobs RunPod (images + vidéo)
 var _runpodJobStart=null; // timestamp début job en cours
+var _videoFinished=false; // flag pour éviter double showFinalResult
 
 /* ── PERSISTANCE SESSION ── */
 var SESSION_KEY='food_da_session';
@@ -425,7 +426,7 @@ function loadSession(){
 }
 
 function checkResumeSession(){
-  if(img64)return;
+  if(img64)return; // session déjà active en mémoire — pas de bannière
   var s=loadSession();
   if(!s||!s.img64)return;
   // Afficher bannière de reprise
@@ -510,7 +511,7 @@ function resetState(){
   _aborted=false;
   if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}_sessionStart=null;
   _dishName=null;_sessionId=null;
-  _runpodTimeMs=0;_runpodJobStart=null;
+  _runpodTimeMs=0;_runpodJobStart=null;_videoFinished=false;
   clearSession();
   document.getElementById('session-content').innerHTML='';
   document.getElementById('session-screen').classList.remove('active');
@@ -964,6 +965,8 @@ function pollVideo(jobId,attempt){
     .then(function(d){
       if(_aborted)return;
       if(d.status==='ok'){
+        if(_videoFinished)return; // éviter double appel
+        _videoFinished=true;
         if(_runpodJobStart){_runpodTimeMs+=Date.now()-_runpodJobStart;_runpodJobStart=null;}
         // Récupérer l'URL vidéo
         var videoUrl=d.video_url||(d.clip_urls&&d.clip_urls[0])||null;

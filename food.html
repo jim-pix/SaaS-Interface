@@ -425,6 +425,7 @@ function loadSession(){
 }
 
 function checkResumeSession(){
+  if(img64)return;
   var s=loadSession();
   if(!s||!s.img64)return;
   // Afficher bannière de reprise

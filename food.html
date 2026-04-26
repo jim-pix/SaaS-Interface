@@ -2050,14 +2050,19 @@ function pollVideo(operationName, attempt) {
             if (vFill) vFill.id = 'vid-fill-done';
             if (vGauge) vGauge.id = 'vid-gauge-done';
             card.className = 'gen-card';
-            card.innerHTML =
-              '<video autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" onclick="openVideoLightbox(this.src)">'+
-                '<source src="' + videoSrc + '" type="video/mp4">'+
-              '</video>'+
-              '<div class="gen-card-status" style="background:linear-gradient(to top,rgba(14,10,6,.85),transparent);">'+
-                '<div class="gen-card-label">Vidéo ✓ — tap pour agrandir</div>'+
-              '</div>';
-            console.log('[VID] innerHTML injecté');
+            card.innerHTML = '<div class="gen-card-status" style="background:linear-gradient(to top,rgba(14,10,6,.85),transparent);"><div class="gen-card-label">Vidéo ✓ — tap pour agrandir</div></div>';
+            var vEl = document.createElement('video');
+            vEl.autoplay = true; vEl.loop = true; vEl.muted = true;
+            vEl.setAttribute('playsinline', '');
+            vEl.setAttribute('webkit-playsinline', '');
+            if (_hdResults && _hdResults[0] && _hdResults[0].startsWith('http')) vEl.poster = _hdResults[0];
+            vEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;position:absolute;inset:0;';
+            vEl.onclick = function() { openVideoLightbox(videoSrc); };
+            vEl.src = videoSrc;
+            vEl.load();
+            vEl.play().catch(function(){});
+            card.insertBefore(vEl, card.firstChild);
+            console.log('[VID] vidéo injectée');
           }
           addToLibrary('video', { url: videoSrc, name: (_dishName || 'Plat') + ' — Vidéo', date: Date.now() });
           setTimeout(function() { showFinalResult(null, videoSrc); }, 800);
@@ -2113,10 +2118,20 @@ function showFinalResult(videoB64, videoUrl) {
   var thumbVid = document.createElement('div'); thumbVid.className = 'result-thumb';
   thumbVid.style.aspectRatio = _arStyle();
   if (videoUrl) {
-    thumbVid.innerHTML =
-      '<video autoplay loop muted playsinline onclick="openVideoLightbox(\'' + videoUrl + '\')"><source src="' + videoUrl + '" type="video/mp4"></video>' +
+    var tvEl = document.createElement('video');
+    tvEl.autoplay = true; tvEl.loop = true; tvEl.muted = true;
+    tvEl.setAttribute('playsinline', '');
+    tvEl.setAttribute('webkit-playsinline', '');
+    if (imgSrc && imgSrc.startsWith('http')) tvEl.poster = imgSrc;
+    tvEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    tvEl.onclick = function() { openVideoLightbox(videoUrl); };
+    tvEl.src = videoUrl;
+    tvEl.load();
+    tvEl.play().catch(function(){});
+    thumbVid.appendChild(tvEl);
+    thumbVid.insertAdjacentHTML('beforeend',
       '<div class="result-thumb-lbl">Vidéo</div>' +
-      '<a class="gen-dl-btn" href="' + videoUrl + '" download="video.mp4" onclick="event.stopPropagation()">↓</a>';
+      '<a class="gen-dl-btn" href="' + videoUrl + '" download="video.mp4" onclick="event.stopPropagation()">↓</a>');
   } else {
     thumbVid.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--white-dim);font-family:\'DM Mono\',monospace;font-size:9px;">—</div>';
   }

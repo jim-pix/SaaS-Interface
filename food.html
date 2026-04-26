@@ -1081,6 +1081,14 @@ function showMain(token) {
   document.getElementById('gh-led').classList.add('on');
   document.getElementById('gh-user-name').textContent = token.slice(0, 14) + '…';
   document.getElementById('account-token-display').textContent = token.slice(0, 14) + '…';
+  fetch(SERVER + '/food/me', { headers: { 'X-Api-Token': token } })
+    .then(function(r){ return r.json(); })
+    .then(function(me){
+      window._me = me;
+      setHeaderTitle(me.restaurant_name || me.email || token.slice(0,14)+'…');
+      setHeaderSub(me.chef_name ? 'Chef · ' + me.chef_name : 'EasyAI Food DA');
+    })
+    .catch(function(){});
   checkResumeSession();
 }
 
@@ -1406,10 +1414,14 @@ function showSessionBar() {
 }
 
 function resetSessionBar() {
-  // Retour à l'état par défaut
-  var t = tok();
-  setHeaderTitle(t ? t.slice(0, 14) + '…' : '—');
-  setHeaderSub('EasyAI Food DA');
+  if (window._me) {
+    setHeaderTitle(window._me.restaurant_name || window._me.email || (tok()||'').slice(0,14)+'…');
+    setHeaderSub(window._me.chef_name ? 'Chef · ' + window._me.chef_name : 'EasyAI Food DA');
+  } else {
+    var t = tok();
+    setHeaderTitle(t ? t.slice(0, 14) + '…' : '—');
+    setHeaderSub('EasyAI Food DA');
+  }
 }
 
 function _fmtTimer() {

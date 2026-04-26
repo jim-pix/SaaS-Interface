@@ -2017,7 +2017,7 @@ function launchVideo() {
     if (_aborted) return;
     var msg = e.message || '';
     if (msg === '503') { showProdError('IA indisponible — réessayez.', launchVideo); return; }
-    if (msg === '429') { showProdError('Quota dépassé — réessayez.', launchVideo); return; }
+    if (msg === '429') { showProdError('Vous avez atteint votre limite journalière de vidéos. Revenez demain !', function(){ resetState(); goTo('screen-home'); }); return; }
     showProdError('Erreur réseau — réessayez.', launchVideo);
   });
 }

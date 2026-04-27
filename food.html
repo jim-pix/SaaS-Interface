@@ -1089,6 +1089,30 @@ function showMain(token) {
       setHeaderSub(me.chef_name ? 'Chef · ' + me.chef_name : 'EasyAI Food DA');
     })
     .catch(function(){});
+  // Charger la bibliothèque depuis S3 (persistée entre sessions et devices)
+  fetch(SERVER + '/food/library', { headers: { 'X-Api-Token': token } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(lib){
+      if (!lib) return;
+      var changed = false;
+      if (lib.images && lib.images.length) {
+        _library.images = lib.images.map(function(e){
+          return { url: e.url, name: e.name || '—', dish: e.dish || '', style: e.style || '', date: e.created_at ? new Date(e.created_at).getTime() : Date.now() };
+        });
+        changed = true;
+      }
+      if (lib.videos && lib.videos.length) {
+        _library.videos = lib.videos.map(function(e){
+          return { url: e.url, name: e.name || '—', dish: e.dish || '', style: e.style || '', poster: e.poster || '', date: e.created_at ? new Date(e.created_at).getTime() : Date.now() };
+        });
+        changed = true;
+      }
+      if (changed) {
+        updateLibCount();
+        try { localStorage.setItem('food_library', JSON.stringify(_library)); } catch(e){}
+      }
+    })
+    .catch(function(){});
   checkResumeSession();
 }
 
@@ -1182,12 +1206,20 @@ function refreshLibrary() {
     _library.videos.forEach(function(item, i) {
       var card = document.createElement('div'); card.className = 'lib-card';
       var vid = document.createElement('video');
-      vid.src = item.url; vid.muted = true; vid.loop = true; vid.setAttribute('playsinline','');
-      vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      vid.src = item.url; vid.muted = true; vid.loop = true;
+      vid.setAttribute('playsinline','');
+      vid.setAttribute('webkit-playsinline','');
+      if (item.poster) vid.poster = item.poster;
+      vid.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+      vid.load();
       card.appendChild(vid);
+      // Badge vidéo
+      var badge = document.createElement('div'); badge.className = 'lib-badge';
+      badge.innerHTML = '<svg style="width:9px;height:9px;fill:none;stroke:var(--amber);stroke-width:1.5;" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+      card.appendChild(badge);
       var name = document.createElement('div'); name.className = 'lib-name'; name.textContent = item.name || ('Vidéo ' + (i+1));
       card.appendChild(name);
-      card.onclick = function() { vid.paused ? vid.play() : vid.pause(); };
+      card.onclick = function() { openVideoLightbox(item.url); };
       gridVid.appendChild(card);
     });
   }
@@ -1214,7 +1246,10 @@ function refreshSocials() {
       thumb.appendChild(img);
     } else {
       var vid = document.createElement('video'); vid.src = entry.item.url; vid.muted = true;
+      vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
+      if (entry.item.poster) vid.poster = entry.item.poster;
       vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      vid.load();
       thumb.appendChild(vid);
     }
     var info = document.createElement('div'); info.className = 'hist-info';
@@ -1905,7 +1940,7 @@ function launchHD(brief, _attempt) {
       method: 'POST',
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': tok() },
-      body: JSON.stringify({ image: compressed, prompt: prompt, aspect_ratio: _outputFormat, session_id: _sessionId, dish_name: _dishName })
+      body: JSON.stringify({ image: compressed, prompt: prompt, aspect_ratio: _outputFormat, session_id: _sessionId, dish_name: _dishName, style_name: (_styles && _styleIdx >= 0 && _styles[_styleIdx]) ? _styles[_styleIdx].name : '' })
     })
     .then(function(r) {
       clearTimeout(timer);
@@ -2029,7 +2064,7 @@ function pollVideo(operationName, attempt) {
     fetch(SERVER + '/food/video_status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': tok() },
-      body: JSON.stringify({ operation_name: operationName, session_id: _sessionId || '', dish_name: _dishName || '' })
+      body: JSON.stringify({ operation_name: operationName, session_id: _sessionId || '', dish_name: _dishName || '', image_url: (_hdResults && _hdResults[0]) || '', style_name: (_styles && _styleIdx >= 0 && _styles[_styleIdx]) ? _styles[_styleIdx].name : '' })
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {

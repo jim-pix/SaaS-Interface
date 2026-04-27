@@ -359,6 +359,15 @@ html, body { width: 100%; height: 100%; background: #000; font-family: 'DM Sans'
 }
 .fmt-btn.active { border-color: var(--amber); background: rgba(200,146,42,.15); color: var(--amber); }
 .fmt-icon { border: 1.5px solid currentColor; border-radius: 3px; flex-shrink: 0; }
+/* ── CAMERA MODE SELECTOR ── */
+.cam-btn {
+  flex: 1; min-width: 0; padding: 8px 4px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--amber-border); background: var(--amber-faint);
+  color: var(--amber-dim); font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  transition: all .15s;
+}
+.cam-btn.active { border-color: var(--amber); background: rgba(200,146,42,.15); color: var(--amber); }
 .preview-photo-big {
   width: 100%; border-radius: 14px; object-fit: cover;
   max-height: 260px; display: none; border: 1px solid var(--amber-border);
@@ -1118,8 +1127,7 @@ function showMain(token) {
     .then(function(r){ return r.json(); })
     .then(function(me){
       window._me = me;
-      setHeaderTitle(me.restaurant_name || me.email || token.slice(0,14)+'…');
-      setHeaderSub(me.chef_name ? 'Chef · ' + me.chef_name : 'EasyAI Food DA');
+      resetSessionBar();
     })
     .catch(function(){});
   // Charger la bibliothèque depuis S3 (persistée entre sessions et devices)
@@ -1169,10 +1177,26 @@ function tok() { return window._token || sessionStorage.getItem('food_token') ||
 /* ── STATE ── */
 var img64 = null, imgMime = 'image/jpeg';
 var _outputFormat = '9:16';
+var _cameraMode = null;
+var _ingredients = [];
+var CAMERA_MODES = {
+  'dolly_in': { label: 'Zoom +', instruction: 'Camera slowly pushes in toward the dish, smooth forward tracking shot ending in extreme close-up of food texture.' },
+  'dolly_out':{ label: 'Recul',  instruction: 'Camera slowly pulls back and rises, smooth pull-out shot revealing the full plate and table environment.' },
+  'orbit':    { label: 'Orbit',  instruction: 'Camera rotates in a slow 180-degree clockwise arc around the dish, circular tracking shot at constant distance from the subject.' },
+  'overhead': { label: 'Aerial', instruction: 'Top-down overhead angle, camera looking straight down at the dish, flat-lay composition from above.' },
+  'steam':    { label: 'Vapeur', instruction: 'Static locked-off macro shot, wisps of steam rising from hot food, shallow depth of field, warm backlight.' },
+  'explode':  { label: 'Éclat',  instruction: 'Explosive slow-motion food shot: the dish bursts apart, ingredients and sauce droplets float upward in zero gravity with gentle linear drift, camera slowly pushes forward through the floating particles as they drift past the lens in macro detail, dramatic backlit studio lighting.' },
+  'assemble': { label: 'Chute',  instruction: '' }
+};
 
 function selectFormat(fmt, btn) {
   _outputFormat = fmt;
   document.querySelectorAll('.fmt-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function selectCameraMode(mode, btn) {
+  _cameraMode = mode;
+  document.querySelectorAll('.cam-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
 }
 var _styles = null, _styleIdx = -1;
@@ -1212,7 +1236,7 @@ function startHDTimer() {
 function stopHDTimer() {
   if (_hdTimerInterval) { clearInterval(_hdTimerInterval); _hdTimerInterval = null; }
 }
-var _dishName = null, _sessionId = null;
+var _dishName = null, _sessionId = null, _sessionTs = null;
 var _runpodTimeMs = 0, _runpodJobStart = null;
 var _videoFinished = false;
 
@@ -1582,7 +1606,7 @@ function resetState() {
   _aborted = false; _videoFinished = false;
   if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
   stopHDTimer();
-  _sessionStart = null; _dishName = null; _sessionId = null;
+  _sessionStart = null; _dishName = null; _sessionId = null; _cameraMode = null; _ingredients = [];
   _runpodTimeMs = 0; _runpodJobStart = null;
   clearSession();
   // Reset UI — revenir à l'état upload
@@ -1647,7 +1671,11 @@ function showSessionBar() {
 function resetSessionBar() {
   if (window._me) {
     setHeaderTitle(window._me.restaurant_name || window._me.email || (tok()||'').slice(0,14)+'…');
-    setHeaderSub(window._me.chef_name ? 'Chef · ' + window._me.chef_name : 'EasyAI Food DA');
+    var chef = window._me.chef_name ? 'Chef · ' + window._me.chef_name : 'EasyAI';
+    var q = window._me.quota_daily || 0;
+    var imgLeft = Math.max(0, q - (window._me.images_today || 0));
+    var vidLeft = Math.max(0, q - (window._me.videos_today || 0));
+    setHeaderSub(chef + '  ·  📸 ' + imgLeft + ' · 🎥 ' + vidLeft);
   } else {
     var t = tok();
     setHeaderTitle(t ? t.slice(0, 14) + '…' : '—');
@@ -1759,12 +1787,13 @@ function callGeminiStyles() {
       var c = d.brief.replace(/```json/gi,'').replace(/```/g,'').trim(); c = c.slice(c.indexOf('{'));
       var b = JSON.parse(c);
       if (b.phase === '1a' && b.styles && b.styles.length >= 3) {
-        _styles = b.styles; _hdBriefs = b.hd || null; _montageBriefs = b.montage || null; _dishName = b.dish_name || 'Plat';
+        _styles = b.styles; _hdBriefs = b.hd || null; _montageBriefs = b.montage || null; _dishName = b.dish_name || 'Plat'; _ingredients = b.ingredients || [];
         var now = new Date();
         var dd = String(now.getDate()).padStart(2,'0'), mm = String(now.getMonth()+1).padStart(2,'0'), yy = String(now.getFullYear()).slice(-2);
         var hh = String(now.getHours()).padStart(2,'0'), mn = String(now.getMinutes()).padStart(2,'0');
-        var userSlug = (tok()||'user').replace(/[^a-zA-Z0-9]/g,'-').slice(0,12);
-        _sessionId = userSlug + '-' + dd + '-' + mm + '-' + yy + '-' + hh + mn;
+        var dishSlug = (_dishName||'plat').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').toLowerCase().slice(0,20).replace(/^_+|_+$/g,'');
+        _sessionTs = dd + mm + yy + '_' + hh + mn;
+        _sessionId = (dishSlug || 'plat') + '_' + _sessionTs;
         // Mettre à jour le header avec le nom du plat
         setHeaderTitle(_dishName);
         // Afficher la bulle DA avec nom du plat + input confirmation
@@ -1806,6 +1835,10 @@ function confirmDish() {
   if (!isPositive) {
     _dishName = userInput;
     setHeaderTitle(_dishName);
+    if (_sessionTs) {
+      var corrSlug = _dishName.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').toLowerCase().slice(0,20).replace(/^_+|_+$/g,'');
+      _sessionId = (corrSlug || 'plat') + '_' + _sessionTs;
+    }
     var bubbleTxt = document.getElementById('da-bubble-txt');
     if (bubbleTxt) bubbleTxt.innerHTML = 'Noté, je travaille sur <strong>' + _dishName + '</strong>.';
   }
@@ -2105,6 +2138,7 @@ function _handleHDResponse(d, brief, _attempt) {
         console.log('[HANDLE] innerHTML injecté');
       }
       addToLibrary('image', { url: src, name: (_dishName || 'Plat') + ' — ' + (_styles && _styleIdx >= 0 ? _styles[_styleIdx].name : ''), date: Date.now() });
+      if (window._me) { window._me.images_today = (window._me.images_today || 0) + 1; }
       saveSession({ hdResults: _hdResults });
       setHeaderSub('Image générée — que souhaitez-vous faire ?');
       setTimeout(function() { showImageValidation(src, brief); }, 700);
@@ -2137,7 +2171,7 @@ function launchHD(brief, _attempt) {
     })
     .then(function(r) {
       if (r.status === 503) throw new Error('503');
-      if (r.status === 429) throw new Error('429');
+      if (r.status === 429) return r.json().catch(function(){ return {}; }).then(function(d) { throw new Error('QUOTA_IMG:' + (d.detail || 'Quota journalier d\'images atteint. Revenez demain !')); });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
@@ -2154,18 +2188,20 @@ function launchHD(brief, _attempt) {
       stopHDTimer();
       if (_aborted) return;
       var msg = e.message || '';
-      if ((msg === '503' || msg === '429') && _attempt < 4) {
+      if (msg.indexOf('QUOTA_IMG:') === 0) {
+        showProdError(msg.slice(10), function(){ resetState(); goTo('screen-home'); });
+        return;
+      }
+      if (msg === '503' && _attempt < 4) {
         var base = Math.pow(2, _attempt - 1);
         var jitter = base * (0.8 + Math.random() * 0.4);
-        var label = msg === '503' ? 'IA surchargée' : 'Quota';
         var lbl = document.getElementById('hd-lbl');
-        if (lbl) lbl.textContent = label + ' — nouvelle tentative dans ' + Math.round(jitter) + 's…';
+        if (lbl) lbl.textContent = 'IA surchargée — nouvelle tentative dans ' + Math.round(jitter) + 's…';
         setHeaderSub('Tentative ' + _attempt + '/4 — ' + Math.round(jitter) + 's…');
         setTimeout(function() { if (!_aborted) launchHD(brief, _attempt + 1); }, jitter * 1000);
         return;
       }
-      var errMsg = msg === '503' ? 'IA indisponible — réessayez plus tard.' :
-                   msg === '429' ? 'Quota dépassé — réessayez.' : 'Erreur réseau — réessayez.';
+      var errMsg = msg === '503' ? 'IA indisponible — réessayez plus tard.' : 'Erreur réseau — réessayez.';
       showProdError(errMsg, function() { launchHD(brief); });
     });
   });
@@ -2211,7 +2247,14 @@ function showImageValidation(src, brief) {
   var wrap = document.createElement('div');
   wrap.className = 'img-validation';
   wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;animation:fadeSlideIn .3s ease both;';
+  var _camBtnsHtml = Object.keys(CAMERA_MODES).map(function(k) {
+    return '<button class="cam-btn' + (_cameraMode === k ? ' active' : '') + '" onclick="selectCameraMode(\'' + k + '\',this)">' + CAMERA_MODES[k].label + '</button>';
+  }).join('');
   wrap.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:6px;">'+
+      '<div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber-dim);">Mouvement caméra</div>'+
+      '<div style="display:flex;gap:6px;">'+_camBtnsHtml+'</div>'+
+    '</div>'+
     '<button style="width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;'+
       'background:linear-gradient(135deg,rgba(200,146,42,.18),rgba(200,146,42,.08));'+
       'border:0.5px solid var(--amber-border);color:var(--amber);'+
@@ -2237,10 +2280,23 @@ function startVideo() {
 
 /* ── LAUNCH VIDEO — Veo 3.1 ── */
 function launchVideo() {
-  var videoPrompt = 'Slow cinematic dolly in, warm golden light, professional food commercial, portrait 9:16';
+  var stylePrompt = 'warm golden light, professional food photography, cinematic';
   if (_montageBriefs && _montageBriefs[_styleIdx]) {
     var mb = _montageBriefs[_styleIdx];
-    videoPrompt = mb.prompt || (mb.clips && mb.clips[0] && mb.clips[0].prompt) || videoPrompt;
+    stylePrompt = mb.prompt || (mb.clips && mb.clips[0] && mb.clips[0].prompt) || stylePrompt;
+  }
+  var cam = _cameraMode ? CAMERA_MODES[_cameraMode] : null;
+  var videoPrompt;
+  if (_cameraMode === 'assemble') {
+    var ingList = _ingredients.length > 0 ? _ingredients.join(', ') : 'fresh ingredients';
+    videoPrompt = 'Food assembly shot: empty plate at the start, then ' + ingList
+      + ' fall from above one by one in realistic slow motion, landing to compose '
+      + (_dishName || 'the dish')
+      + '. Crisp overhead food photography lighting, professional food commercial.';
+  } else if (cam && cam.instruction) {
+    videoPrompt = cam.instruction + ' ' + stylePrompt + ' ' + cam.instruction;
+  } else {
+    videoPrompt = 'Slow cinematic dolly in. ' + stylePrompt;
   }
   var imgB64 = _hdResults[0] || img64;
   if (imgB64.indexOf(',') >= 0) imgB64 = imgB64.split(',')[1];
@@ -2292,7 +2348,7 @@ function pollVideo(operationName, attempt) {
     fetch(SERVER + '/food/video_status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': tok() },
-      body: JSON.stringify({ operation_name: operationName, session_id: _sessionId || '', dish_name: _dishName || '', image_url: (_hdResults && _hdResults[0]) || '', style_name: (_styles && _styleIdx >= 0 && _styles[_styleIdx]) ? _styles[_styleIdx].name : '' })
+      body: JSON.stringify({ operation_name: operationName, session_id: _sessionId || '', dish_name: _dishName || '', image_url: (_hdResults && _hdResults[0]) || '', style_name: (_styles && _styleIdx >= 0 && _styles[_styleIdx]) ? _styles[_styleIdx].name : '', prompt: (_montageBriefs && _montageBriefs[_styleIdx]) ? (_montageBriefs[_styleIdx].prompt || '') : '', camera_mode: _cameraMode || 'auto' })
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {
@@ -2328,6 +2384,7 @@ function pollVideo(operationName, attempt) {
             console.log('[VID] vidéo injectée');
           }
           addToLibrary('video', { url: videoSrc, name: (_dishName || 'Plat') + ' — Vidéo', date: Date.now() });
+          if (window._me) { window._me.videos_today = (window._me.videos_today || 0) + 1; }
           setTimeout(function() { showFinalResult(null, videoSrc); }, 800);
         } catch(err) {
           console.error('[VID] EXCEPTION:', err.message, err.stack);

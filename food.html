@@ -1033,6 +1033,7 @@ function goTo(screenId) {
   document.getElementById(screenId).classList.add('active');
   var navId = NAV_MAP[screenId];
   if (navId) document.getElementById(navId).classList.add('active');
+  if (screenId === 'screen-home') refreshHomeRecents();
   if (screenId === 'screen-library') refreshLibrary();
   if (screenId === 'screen-socials') refreshSocials();
   if (screenId === 'screen-account') refreshAccount();
@@ -1109,6 +1110,7 @@ function showMain(token) {
       }
       if (changed) {
         updateLibCount();
+        refreshHomeRecents();
         try { localStorage.setItem('food_library', JSON.stringify(_library)); } catch(e){}
       }
     })
@@ -1189,6 +1191,7 @@ function addToLibrary(type, item) {
   _library[type === 'image' ? 'images' : 'videos'].push(item);
   try { localStorage.setItem('food_library', JSON.stringify(_library)); } catch(e){}
   updateLibCount();
+  refreshHomeRecents();
 }
 
 function loadLibrary() {
@@ -1296,6 +1299,96 @@ function refreshSocials() {
 function refreshAccount() {
   document.getElementById('account-img-count').textContent = _library.images.length;
   document.getElementById('account-vid-count').textContent = _library.videos.length;
+}
+
+function _relativeDate(ts) {
+  if (!ts) return '';
+  var diff = Date.now() - ts;
+  var m = Math.floor(diff / 60000);
+  if (m < 2) return 'À l\'instant';
+  if (m < 60) return 'Il y a ' + m + ' min';
+  var h = Math.floor(m / 60);
+  if (h < 24) return 'Il y a ' + h + 'h';
+  var d = Math.floor(h / 24);
+  if (d < 7) return 'Il y a ' + d + 'j';
+  return 'Il y a ' + Math.floor(d / 7) + ' sem.';
+}
+
+function refreshHomeRecents() {
+  var wrap = document.getElementById('home-recents');
+  if (!wrap) return;
+  // Fusionner images + vidéos, trier par date desc, garder les 6 plus récents
+  var all = _library.images.map(function(i){ return {type:'img', item:i}; })
+    .concat(_library.videos.map(function(v){ return {type:'vid', item:v}; }));
+  all.sort(function(a, b){ return (b.item.date||0) - (a.item.date||0); });
+  var recent = all.slice(0, 6);
+
+  if (recent.length === 0) {
+    // Shimmer placeholder (état initial)
+    wrap.innerHTML =
+      '<div class="rec-card"><div class="rec-img"></div><div class="rec-name"></div><div class="rec-date"></div></div>'.repeat(3);
+    return;
+  }
+
+  wrap.innerHTML = '';
+  recent.forEach(function(entry) {
+    var card = document.createElement('div'); card.className = 'rec-card';
+    var thumb = document.createElement('div');
+    thumb.style.cssText = 'height:150px;border-radius:14px;margin-bottom:8px;overflow:hidden;position:relative;background:#1a1208;';
+
+    if (entry.type === 'img') {
+      var img = document.createElement('img');
+      img.src = entry.item.url;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      img.onerror = function(){ this.style.display='none'; };
+      thumb.appendChild(img);
+      // Badge image
+      thumb.insertAdjacentHTML('beforeend',
+        '<div style="position:absolute;bottom:6px;left:6px;background:rgba(14,10,6,.75);border-radius:4px;padding:2px 5px;font-family:\'DM Mono\',monospace;font-size:8px;color:var(--amber);letter-spacing:.06em;">IMG</div>');
+    } else {
+      // Vidéo — afficher le poster si dispo, sinon une miniature vidéo
+      if (entry.item.poster) {
+        var pImg = document.createElement('img');
+        pImg.src = entry.item.poster;
+        pImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+        pImg.onerror = function(){ this.style.display='none'; };
+        thumb.appendChild(pImg);
+      } else {
+        var vEl = document.createElement('video');
+        vEl.src = entry.item.url; vEl.muted = true;
+        vEl.setAttribute('playsinline',''); vEl.setAttribute('webkit-playsinline','');
+        vEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+        vEl.load();
+        thumb.appendChild(vEl);
+      }
+      // Badge vidéo
+      thumb.insertAdjacentHTML('beforeend',
+        '<div style="position:absolute;bottom:6px;left:6px;background:rgba(14,10,6,.75);border-radius:4px;padding:2px 5px;font-family:\'DM Mono\',monospace;font-size:8px;color:var(--amber);letter-spacing:.06em;">▶ VID</div>');
+    }
+
+    card.appendChild(thumb);
+
+    var nm = document.createElement('div');
+    nm.style.cssText = 'font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:500;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;';
+    nm.textContent = entry.item.dish || entry.item.name || '—';
+    card.appendChild(nm);
+
+    var dt = document.createElement('div');
+    dt.style.cssText = 'font-family:\'DM Mono\',monospace;font-size:8px;color:var(--white-dim);letter-spacing:.04em;';
+    dt.textContent = _relativeDate(entry.item.date);
+    card.appendChild(dt);
+
+    // Clic : ouvre lightbox ou vidéo
+    card.style.cursor = 'pointer';
+    card.onclick = (function(e){
+      return function() {
+        if (e.type === 'img') openLightbox(e.item.url);
+        else openVideoLightbox(e.item.url);
+      };
+    })(entry);
+
+    wrap.appendChild(card);
+  });
 }
 
 /* ── SESSION PERSIST ── */

@@ -619,6 +619,37 @@ html, body { width: 100%; height: 100%; background: #000; font-family: 'DM Sans'
 
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 svg.ic { width: 22px; height: 22px; fill: none; stroke: rgba(200,146,42,.6); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── RESPONSIVE DESKTOP ── */
+@media (min-width: 600px) {
+  html, body { background: #030201; }
+
+  /* Tous les éléments fixed contraints à une colonne centrée 430px */
+  #page-auth,
+  #page-main,
+  #global-header,
+  .bottom-sheet,
+  #resume-banner,
+  #debug-panel {
+    left: calc(50% - 215px) !important;
+    right: auto !important;
+    width: 430px !important;
+  }
+
+  /* Debug toggle — collé au bord droit de la colonne */
+  #debug-toggle {
+    left: auto !important;
+    right: calc(50% - 215px) !important;
+    width: auto !important;
+  }
+
+  /* Délimitation subtile du "téléphone" sur fond sombre */
+  #page-main {
+    border-left: 0.5px solid rgba(200,146,42,0.08);
+    border-right: 0.5px solid rgba(200,146,42,0.08);
+    box-shadow: -30px 0 80px rgba(0,0,0,.7), 30px 0 80px rgba(0,0,0,.7);
+  }
+}
 </style>
 </head>
 <body>

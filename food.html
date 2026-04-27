@@ -1155,14 +1155,24 @@ function _fmtElapsed(ms) {
   return Math.floor(s / 60) + 'm' + String(s % 60).padStart(2, '0') + 's';
 }
 function startHDTimer() {
+  var EXPECTED_MS = 300000; // 5 min — durée médiane observée sur Gemini Image
   if (_hdTimerInterval) clearInterval(_hdTimerInterval);
   _hdTimerInterval = setInterval(function() {
     if (_aborted) { clearInterval(_hdTimerInterval); _hdTimerInterval = null; return; }
-    var elapsed = _fmtElapsed(Date.now() - _genStart);
+    var elapsed = Date.now() - _genStart;
+    var pct = Math.min(88, (elapsed / EXPECTED_MS) * 88);
+    var msg;
+    if (elapsed < EXPECTED_MS) {
+      var remaining = EXPECTED_MS - elapsed;
+      msg = 'Génération image… ' + _fmtElapsed(elapsed) + ' · ~' + _fmtElapsed(remaining) + ' restant';
+    } else {
+      msg = 'Génération longue… ' + _fmtElapsed(elapsed) + ' · encore un peu…';
+    }
     var lbl = document.getElementById('hd-lbl');
-    var msg = 'Génération image… ' + elapsed;
     if (lbl) lbl.textContent = msg;
     setHeaderSub(msg);
+    setGauge('hd-gauge', pct);
+    setFill('hd-fill', pct * 0.8);
   }, 1000);
 }
 function stopHDTimer() {
@@ -1911,10 +1921,9 @@ function _handleHDResponse(d, brief, _attempt) {
   stopHDTimer();
   if (_aborted) return;
   try {
-    if (d.status === 'ok' && d.image) {
+    if (d.status === 'ok' && (d.image || d.image_url)) {
       _genTimeMs += Date.now() - _genStart;
-      var cleanBase64 = d.image.replace(/\s/g, '');
-      var src = 'data:image/jpeg;base64,' + cleanBase64;
+      var src = d.image_url || ('data:image/jpeg;base64,' + (d.image || '').replace(/\s/g, ''));
       console.log('[HANDLE] src length=', src.length);
       _hdResults[0] = src;
       console.log('[HANDLE] _hdResults[0] set');
@@ -1956,33 +1965,31 @@ function launchHD(brief, _attempt) {
       return;
     }
 
-    var controller = new AbortController();
-    var timer = setTimeout(function() { controller.abort(); }, 600000);
-
+    // Appel court — le backend répond immédiatement avec un operation_id
     fetch(SERVER + '/food/generate_image', {
       method: 'POST',
-      signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'X-Api-Token': tok() },
       body: JSON.stringify({ image: compressed, prompt: prompt, aspect_ratio: _outputFormat, session_id: _sessionId, dish_name: _dishName, style_name: (_styles && _styleIdx >= 0 && _styles[_styleIdx]) ? _styles[_styleIdx].name : '' })
     })
     .then(function(r) {
-      clearTimeout(timer);
       if (r.status === 503) throw new Error('503');
       if (r.status === 429) throw new Error('429');
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
     .then(function(d) {
-      _handleHDResponse(d, brief, _attempt);
+      if (d.status === 'queued' && d.operation_id) {
+        // Mode async — polling via /image_status
+        pollImage(d.operation_id, brief, 0);
+      } else {
+        // Fallback si le serveur répond directement (compatibilité)
+        _handleHDResponse(d, brief, _attempt);
+      }
     })
     .catch(function(e) {
-      clearTimeout(timer);
       stopHDTimer();
       if (_aborted) return;
       var msg = e.message || '';
-      if (e.name === 'AbortError' || msg === 'Load failed' || msg === 'Failed to fetch') {
-        showProdError('Délai dépassé — réessayez.', function(){ launchHD(brief); }); return;
-      }
       if ((msg === '503' || msg === '429') && _attempt < 4) {
         var base = Math.pow(2, _attempt - 1);
         var jitter = base * (0.8 + Math.random() * 0.4);
@@ -1998,6 +2005,39 @@ function launchHD(brief, _attempt) {
       showProdError(errMsg, function() { launchHD(brief); });
     });
   });
+}
+
+/* ── POLL IMAGE STATUS ── */
+function pollImage(operationId, brief, attempt) {
+  if (attempt > 120) {
+    stopHDTimer();
+    showProdError('Timeout image — réessayez.', function(){ launchHD(brief); });
+    return;
+  }
+  setTimeout(function() {
+    if (_aborted) return;
+    fetch(SERVER + '/food/image_status/' + operationId, {
+      headers: { 'X-Api-Token': tok() }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (_aborted) return;
+      console.log('[IMG] poll attempt=' + attempt + ' status=' + d.status);
+      if (d.status === 'ok') {
+        _handleHDResponse(d, brief, 1);
+      } else if (d.status === 'processing') {
+        pollImage(operationId, brief, attempt + 1);
+      } else {
+        stopHDTimer();
+        var code = d.code || 500;
+        var errMsg = code === 503 ? 'IA indisponible — réessayez plus tard.' :
+                     code === 429 ? 'Quota dépassé — réessayez.' :
+                     'Erreur image : ' + (d.error || '');
+        showProdError(errMsg, function(){ launchHD(brief); });
+      }
+    })
+    .catch(function() { if (!_aborted) pollImage(operationId, brief, attempt + 1); });
+  }, attempt === 0 ? 3000 : 5000);
 }
 
 /* ── VALIDATION IMAGE ── */

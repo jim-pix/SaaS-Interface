@@ -676,6 +676,7 @@ svg.ic { width: 22px; height: 22px; fill: none; stroke: rgba(200,146,42,.6); str
     <div class="scroll">
       <div class="pad">
         <div class="hero">
+          <img id="hero-bg" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:0;transition:opacity 1.2s ease;">
           <div class="hero-overlay"></div>
           <div class="hero-text">
             <h2>Créez votre<br/><span>chef-d'œuvre</span></h2>
@@ -1301,6 +1302,44 @@ function refreshAccount() {
   document.getElementById('account-vid-count').textContent = _library.videos.length;
 }
 
+/* ── CARROUSEL HERO ── */
+var _heroCarousel = { imgs: [], idx: 0, timer: null };
+
+function startHeroCarousel() {
+  if (_heroCarousel.timer) { clearInterval(_heroCarousel.timer); _heroCarousel.timer = null; }
+  var hero = document.getElementById('hero-bg');
+  if (!hero) return;
+
+  // Prendre les URLs S3 des images (pas les base64), les plus récentes en premier
+  var urls = _library.images.slice()
+    .sort(function(a, b){ return (b.date||0) - (a.date||0); })
+    .map(function(i){ return i.url; })
+    .filter(function(u){ return u && u.startsWith('http'); })
+    .slice(0, 10);
+
+  _heroCarousel.imgs = urls;
+  _heroCarousel.idx = 0;
+
+  if (urls.length === 0) { hero.style.opacity = '0'; return; }
+
+  // Afficher la première image
+  hero.onload = function() { hero.style.opacity = '1'; };
+  hero.src = urls[0];
+
+  if (urls.length === 1) return; // Pas besoin de cycle
+
+  _heroCarousel.timer = setInterval(function() {
+    _heroCarousel.idx = (_heroCarousel.idx + 1) % _heroCarousel.imgs.length;
+    hero.style.opacity = '0';
+    setTimeout(function() {
+      hero.src = _heroCarousel.imgs[_heroCarousel.idx];
+      hero.onload = function() { hero.style.opacity = '1'; };
+      // Si image déjà en cache, onload ne se déclenche pas — forcer l'opacité
+      if (hero.complete) hero.style.opacity = '1';
+    }, 1200); // attendre la fin du fade-out avant de changer l'image
+  }, 5000); // 5s par image
+}
+
 function _relativeDate(ts) {
   if (!ts) return '';
   var diff = Date.now() - ts;
@@ -1315,6 +1354,7 @@ function _relativeDate(ts) {
 }
 
 function refreshHomeRecents() {
+  startHeroCarousel();
   var wrap = document.getElementById('home-recents');
   if (!wrap) return;
   // Fusionner images + vidéos, trier par date desc, garder les 6 plus récents

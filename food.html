@@ -1147,6 +1147,27 @@ var _hdResults = [null, null, null], _vidResults = [null, null, null];
 var _aborted = false;
 var _genTimeMs = 0, _genStart = 0;
 var _sessionStart = null, _timerInterval = null;
+var _hdTimerInterval = null;
+
+function _fmtElapsed(ms) {
+  var s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s / 60) + 'm' + String(s % 60).padStart(2, '0') + 's';
+}
+function startHDTimer() {
+  if (_hdTimerInterval) clearInterval(_hdTimerInterval);
+  _hdTimerInterval = setInterval(function() {
+    if (_aborted) { clearInterval(_hdTimerInterval); _hdTimerInterval = null; return; }
+    var elapsed = _fmtElapsed(Date.now() - _genStart);
+    var lbl = document.getElementById('hd-lbl');
+    var msg = 'Génération image… ' + elapsed;
+    if (lbl) lbl.textContent = msg;
+    setHeaderSub(msg);
+  }, 1000);
+}
+function stopHDTimer() {
+  if (_hdTimerInterval) { clearInterval(_hdTimerInterval); _hdTimerInterval = null; }
+}
 var _dishName = null, _sessionId = null;
 var _runpodTimeMs = 0, _runpodJobStart = null;
 var _videoFinished = false;
@@ -1386,6 +1407,7 @@ function resetState() {
   _hdResults = [null, null, null]; _vidResults = [null, null, null];
   _aborted = false; _videoFinished = false;
   if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+  stopHDTimer();
   _sessionStart = null; _dishName = null; _sessionId = null;
   _runpodTimeMs = 0; _runpodJobStart = null;
   clearSession();
@@ -1886,6 +1908,7 @@ function compressImage(b64, maxWidth, quality) {
 /* ── LAUNCH HD — Gemini Image ── */
 function _handleHDResponse(d, brief, _attempt) {
   console.log('[HANDLE] appelé status=', d ? d.status : 'null', 'aborted=', _aborted);
+  stopHDTimer();
   if (_aborted) return;
   try {
     if (d.status === 'ok' && d.image) {
@@ -1922,7 +1945,7 @@ function _handleHDResponse(d, brief, _attempt) {
 
 function launchHD(brief, _attempt) {
   _attempt = _attempt || 1;
-  if (_attempt === 1) { setProgress(0, 'Image envoyée…'); _genStart = Date.now(); }
+  if (_attempt === 1) { setProgress(0, 'Génération image… 0s'); _genStart = Date.now(); startHDTimer(); }
   var prompt = brief.prompt || brief.prompt_1 || '';
 
   compressImage(img64).then(function(compressed) {
@@ -1954,6 +1977,7 @@ function launchHD(brief, _attempt) {
     })
     .catch(function(e) {
       clearTimeout(timer);
+      stopHDTimer();
       if (_aborted) return;
       var msg = e.message || '';
       if (e.name === 'AbortError' || msg === 'Load failed' || msg === 'Failed to fetch') {

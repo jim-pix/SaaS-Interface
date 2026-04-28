@@ -215,19 +215,70 @@ html, body {
   letter-spacing: .08em; margin-left: 6px; vertical-align: middle;
 }
 
-/* Start date picker */
-.start-date-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 0; margin-bottom: 4px;
+/* Launch section */
+.launch-card {
+  border-radius: 16px; border: 2px dashed var(--amber-border);
+  padding: 28px 20px; text-align: center; margin-bottom: 20px;
+  background: var(--amber-faint);
 }
-.start-date-row label {
-  font-size: 12px; color: var(--white-dim); flex: 1;
+.launch-card-title {
+  font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600;
+  color: var(--amber); margin-bottom: 6px;
+}
+.launch-card-sub {
+  font-size: 13px; color: var(--white-dim); margin-bottom: 20px; line-height: 1.5;
+}
+.btn-launch {
+  display: inline-block; padding: 14px 32px; border-radius: 12px; border: none;
+  background: var(--amber); color: #0e0a06;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+  transition: opacity .2s; margin-bottom: 8px;
+}
+.btn-launch:hover { opacity: .85; }
+
+.running-card {
+  border-radius: 14px; border: 1px solid rgba(76,175,80,0.35);
+  background: rgba(76,175,80,0.07); padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.running-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--green);
+  flex-shrink: 0; box-shadow: 0 0 0 3px rgba(76,175,80,0.2);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(76,175,80,0.2); }
+  50%       { box-shadow: 0 0 0 6px rgba(76,175,80,0.08); }
+}
+.running-info { flex: 1; }
+.running-label {
+  font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--green); margin-bottom: 3px;
+}
+.running-date { font-size: 13px; color: var(--white); }
+.running-day  { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--amber); margin-top: 1px; }
+.btn-reset {
+  font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--white-dim); background: none; border: none;
+  cursor: pointer; padding: 4px 0; text-decoration: underline; display: block;
+  margin-top: 8px;
+}
+.btn-reset:hover { color: var(--white); }
+
+/* Date picker (modal-like, shown when changing date) */
+.date-change-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
 }
 .start-date-input {
-  background: var(--bg2); border: 1px solid var(--border-mid); border-radius: 8px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border-mid); border-radius: 8px;
   color: var(--white); font-family: 'DM Mono', monospace; font-size: 11px;
-  padding: 7px 10px; outline: none; cursor: pointer;
-  color-scheme: dark;
+  padding: 7px 10px; outline: none; cursor: pointer; color-scheme: dark; flex: 1;
+}
+.btn-date-confirm {
+  padding: 7px 14px; border-radius: 8px; border: none;
+  background: var(--amber); color: #0e0a06; font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
 }
 
 /* ── TESTEURS ── */
@@ -447,13 +498,10 @@ html, body {
 
     <!-- ── TAB PLANNING ── -->
     <div class="tab-panel active" id="tab-planning">
-      <div class="start-date-row">
-        <label>Date de début du test (J1) :</label>
-        <input type="date" class="start-date-input" id="start-date" onchange="onStartDateChange()"/>
-      </div>
-      <div class="progress-wrap">
+      <div id="launch-section"></div>
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
         <div class="progress-label">
-          <span>Progression globale</span>
+          <span>Tâches complétées</span>
           <strong id="progress-pct">0%</strong>
         </div>
         <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
@@ -697,6 +745,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function initApp() {
+  renderLaunchSection();
   renderPlanning();
   renderTesters();
   loadMetrics();
@@ -720,11 +769,80 @@ function getStartDate() {
   return saved ? new Date(saved + 'T00:00:00') : null;
 }
 
-function onStartDateChange() {
-  const val = document.getElementById('start-date').value;
-  localStorage.setItem('tm_start_date', val);
+function isLaunched() {
+  return !!localStorage.getItem('tm_start_date');
+}
+
+function launchTest() {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  localStorage.setItem('tm_start_date', dateStr);
+  renderLaunchSection();
   renderPlanning();
   updateCtxChips();
+}
+
+function showDateChanger() {
+  const saved = localStorage.getItem('tm_start_date') || '';
+  const section = document.getElementById('launch-section');
+  // Injecter le mini-formulaire dans la running card
+  const row = section.querySelector('.date-change-row');
+  if (row) { row.style.display = row.style.display === 'none' ? 'flex' : 'none'; return; }
+  const extra = document.createElement('div');
+  extra.className = 'date-change-row';
+  extra.innerHTML = `
+    <input type="date" class="start-date-input" id="change-date" value="${saved}" style="color-scheme:dark"/>
+    <button class="btn-date-confirm" onclick="confirmDateChange()">OK</button>`;
+  section.querySelector('.running-card').appendChild(extra);
+}
+
+function confirmDateChange() {
+  const val = document.getElementById('change-date').value;
+  if (!val) return;
+  localStorage.setItem('tm_start_date', val);
+  renderLaunchSection();
+  renderPlanning();
+  updateCtxChips();
+}
+
+function renderLaunchSection() {
+  const section = document.getElementById('launch-section');
+  const progressWrap = document.getElementById('progress-wrap');
+
+  if (!isLaunched()) {
+    progressWrap.style.display = 'none';
+    section.innerHTML = `
+      <div class="launch-card">
+        <div class="launch-card-title">Phase de test pilote</div>
+        <div class="launch-card-sub">
+          Quand tu es prêt, clique pour démarrer officiellement.<br>
+          J1 sera fixé à aujourd'hui et le planning s'activera.
+        </div>
+        <button class="btn-launch" onclick="launchTest()">🚀 Lancer le test</button>
+      </div>`;
+  } else {
+    progressWrap.style.display = 'block';
+    const start = getStartDate();
+    const currentDay = getCurrentDay();
+    const dayLabel = currentDay <= 0
+      ? `Préparation (J${currentDay})`
+      : currentDay <= 7
+        ? `Test actif — J${currentDay} / 7`
+        : currentDay <= 14
+          ? `Analyse — J${currentDay} / 14`
+          : 'Phase terminée';
+    const dateStr = start.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    section.innerHTML = `
+      <div class="running-card">
+        <div class="running-dot"></div>
+        <div class="running-info">
+          <div class="running-label">Test en cours</div>
+          <div class="running-date">Démarré le ${dateStr}</div>
+          <div class="running-day">${dayLabel}</div>
+          <button class="btn-reset" onclick="showDateChanger()">Modifier la date de départ</button>
+        </div>
+      </div>`;
+  }
 }
 
 function taskDate(dayOffset) {

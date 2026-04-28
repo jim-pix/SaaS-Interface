@@ -474,9 +474,9 @@ html, body {
       <div class="auth-sub">Tableau de pilotage — accès admin</div>
     </div>
     <div class="auth-box">
-      <div class="auth-label">Token administrateur</div>
+      <div class="auth-label">Mot de passe admin (ADMIN_SECRET)</div>
       <input class="auth-input" id="auth-token" type="password" placeholder="••••••••••••••••••••" autocomplete="off"/>
-      <p class="auth-error" id="auth-error">Token invalide ou accès non autorisé.</p>
+      <p class="auth-error" id="auth-error">Mot de passe incorrect.</p>
       <button class="btn-primary" id="auth-btn" onclick="doAuth()">Accéder</button>
     </div>
   </div>
@@ -687,36 +687,27 @@ const PHASES = {
 async function doAuth() {
   const btn = document.getElementById('auth-btn');
   const errEl = document.getElementById('auth-error');
-  const token = document.getElementById('auth-token').value.trim();
-  if (!token) return;
+  const secret = document.getElementById('auth-token').value.trim();
+  if (!secret) return;
 
   btn.disabled = true;
   btn.textContent = 'Vérification…';
   errEl.style.display = 'none';
 
   try {
-    const r = await fetch(`${API}/food/me?token=${encodeURIComponent(token)}`);
+    const r = await fetch(`${API}/food/admin/verify?admin_secret=${encodeURIComponent(secret)}`);
     if (!r.ok) throw new Error('invalid');
-    const me = await r.json();
-    if (!me.is_admin) throw new Error('not_admin');
 
-    _token = token;
-    localStorage.setItem('tm_token', token);
+    _token = secret;
+    localStorage.setItem('tm_token', secret);
 
-    // Header
-    const name = [me.chef_name, me.restaurant_name].filter(Boolean).join(' · ');
-    if (name) document.getElementById('header-sub').textContent = name;
-
-    // Show app
     document.getElementById('page-auth').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
 
     initApp();
   } catch(e) {
     errEl.style.display = 'block';
-    errEl.textContent = e.message === 'not_admin'
-      ? 'Ce compte n\'a pas les droits administrateur.'
-      : 'Token invalide ou compte inactif.';
+    errEl.textContent = 'Mot de passe incorrect.';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Accéder';
@@ -1055,7 +1046,7 @@ async function loadCosts() {
       <div style="margin-top:8px">Chargement depuis Google Sheets…</div>
     </div>`;
   try {
-    const r = await fetch(`${API}/food/admin/generation-stats?token=${encodeURIComponent(_token)}`);
+    const r = await fetch(`${API}/food/admin/generation-stats?admin_secret=${encodeURIComponent(_token)}`);
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     card.innerHTML = `
@@ -1154,7 +1145,7 @@ async function sendMessage() {
   scrollChatToBottom();
 
   try {
-    const r = await fetch(`${API}/food/admin/test-manager-chat?token=${encodeURIComponent(_token)}`, {
+    const r = await fetch(`${API}/food/admin/test-manager-chat?admin_secret=${encodeURIComponent(_token)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
